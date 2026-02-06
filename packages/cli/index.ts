@@ -14,6 +14,7 @@ import {
   getSpawnConfig,
   getScriptArgs,
 } from './src/utils/processUtils.js';
+import { bootstrapOmni } from '@google/gemini-cli-core';
 
 // --- Global Entry Point ---
 
@@ -140,6 +141,7 @@ async function run() {
   } else {
     // --- Heavy Child Process ---
     // Now we can safely import everything.
+    bootstrapOmni();
     const { main } = await import('./src/gemini.js');
     const { FatalError, writeToStderr } = await import(
       '@google/gemini-cli-core'

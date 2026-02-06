@@ -311,3 +311,6 @@ export * from './voice/whisperTranscriptionProvider.js';
 export * from './voice/transcriptionFactory.js';
 export * from './voice/whisperModelManager.js';
 export { isBinaryAvailable } from './utils/binaryCheck.js';
+
+// Export Omni logic
+export * from './omni/index.js';

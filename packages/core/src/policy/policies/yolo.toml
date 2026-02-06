@@ -47,10 +47,25 @@ priority = 999
 modes = ["yolo"]
 interactive = true
 
+[[rule]]
+toolName = "run_shell_command"
+commandRegex = 'git\s+(reset|checkout\s+--|restore|clean).*'
+decision = "ask_user"
+priority = 999
+modes = ["yolo"]
+
+[[rule]]
+toolName = "run_shell_command"
+commandPrefix = "git"
+decision = "allow"
+priority = 998
+modes = ["yolo"]
+allowRedirection = true
+
 # Allow everything else in YOLO mode
 [[rule]]
 toolName = "*"
 decision = "allow"
-priority = 998
+priority = 997
 modes = ["yolo"]
 allowRedirection = true

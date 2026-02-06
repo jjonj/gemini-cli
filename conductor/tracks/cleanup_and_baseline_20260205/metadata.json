@@ -1,0 +1,8 @@
+{
+  "track_id": "cleanup_and_baseline_20260205",
+  "type": "chore",
+  "status": "new",
+  "created_at": "2026-02-05T00:00:00Z",
+  "updated_at": "2026-02-05T00:00:00Z",
+  "description": "Revert local source changes, preserve Omni/non-code files, and delete failing tests."
+}
