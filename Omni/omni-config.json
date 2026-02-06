@@ -1,0 +1,17 @@
+{
+  "overrides": {
+    "folder_trust": {
+      "choiceIndex": 0,
+      "comment": "Auto-trust folders (index 0 is 'trust')"
+    },
+    "ide_nudge": {
+      "choiceIndex": 2,
+      "comment": "Auto-dismiss IDE nudge (index 2 is 'dismiss')"
+    },
+    "confirmation": {
+      "choiceIndex": 0,
+      "pattern": "analytics",
+      "comment": "Auto-confirm analytics prompts"
+    }
+  }
+}

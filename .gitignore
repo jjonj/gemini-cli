@@ -44,6 +44,7 @@ junit.xml
 packages/*/coverage/
 
 # Generated files
+packages/vscode-ide-companion/NOTICES.txt
 packages/cli/src/generated/
 packages/core/src/generated/
 .integration-tests/
@@ -54,6 +55,9 @@ packages/cli/download-ripgrep*/
 gha-creds-*.json
 
 # Log files
+*.log
+*.txt
+*.wav
 patch_output.log
 gemini-debug.log
 
@@ -61,3 +65,6 @@ gemini-debug.log
 .gemini-clipboard/
 .eslintcache
 evals/logs/
+
+# Lock files
+package-lock.json

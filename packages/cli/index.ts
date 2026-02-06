@@ -8,6 +8,7 @@
 
 import { main } from './src/gemini.js';
 import { FatalError, writeToStderr } from '@google/gemini-cli-core';
+import { bootstrapOmni } from './src/omni/bootstrap.js';
 import { runExitCleanup } from './src/utils/cleanup.js';
 
 // --- Global Entry Point ---
@@ -34,6 +35,8 @@ process.on('uncaughtException', (error) => {
   }
   process.exit(1);
 });
+
+bootstrapOmni();
 
 main().catch(async (error) => {
   await runExitCleanup();
