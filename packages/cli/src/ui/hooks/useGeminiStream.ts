@@ -100,7 +100,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { useSessionStats } from '../contexts/SessionContext.js';
 import { useKeypress } from './useKeypress.js';
-import type { LoadedSettings } from '../../config/settings.js';
+import { LoadedSettings } from '../../config/settings.js';
+import { OmniHook } from '../../omni/turnTermination.js';
 
 type ToolResponseWithParts = ToolCallResponseInfo & {
   llmContent?: PartListUnion;
@@ -1084,6 +1085,13 @@ export const useGeminiStream = (
         // Prevents additional output after a user initiated cancel.
         return '';
       }
+
+      const omniResult = OmniHook.handleModelContent(eventValue, addItem, setIsResponding, turnCancelledRef);
+      if (omniResult !== null) {
+        if (omniResult === '') return '';
+        eventValue = omniResult;
+      }
+
       let newGeminiMessageBuffer = currentGeminiMessageBuffer + eventValue;
       if (
         pendingHistoryItemRef.current?.type !== 'gemini' &&
@@ -1475,6 +1483,7 @@ export const useGeminiStream = (
           case ServerGeminiEventType.Thought:
             setLastGeminiActivityTime(Date.now());
             handleThoughtEvent(event.value, userMessageTimestamp);
+            OmniHook.onThought(event.value);
             break;
           case ServerGeminiEventType.Content:
             setLastGeminiActivityTime(Date.now());
@@ -1486,6 +1495,7 @@ export const useGeminiStream = (
             break;
           case ServerGeminiEventType.ToolCallRequest:
             toolCallRequests.push(event.value);
+            OmniHook.onToolCall(event.value);
             break;
           case ServerGeminiEventType.UserCancelled:
             handleUserCancelledEvent(userMessageTimestamp);
@@ -1636,6 +1646,9 @@ export const useGeminiStream = (
             );
 
             if (!shouldProceed || queryToSend === null) {
+              if (activeQueryIdRef.current === queryId) {
+                OmniHook.onTurnFinished();
+              }
               return;
             }
 
@@ -1751,6 +1764,7 @@ export const useGeminiStream = (
             } finally {
               if (activeQueryIdRef.current === queryId) {
                 setIsResponding(false);
+                OmniHook.onTurnFinished();
               }
             }
           });
@@ -1873,6 +1887,18 @@ export const useGeminiStream = (
             return false;
           },
         );
+
+      if (
+        OmniHook.handleToolCompletion(
+          completedAndReadyToSubmitTools,
+          addItem,
+          setIsResponding,
+          markToolsAsSubmitted,
+          geminiClient,
+        )
+      ) {
+        return;
+      }
 
       // Finalize any client-initiated tools as soon as they are done.
       const clientTools = completedAndReadyToSubmitTools.filter(

@@ -6,9 +6,11 @@
 
 import { AuthType } from '@google/gemini-cli-core';
 import { loadEnvironment, loadSettings } from './settings.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 
 export function validateAuthMethod(authMethod: string): string | null {
-  loadEnvironment(loadSettings().merged, process.cwd());
+  const cwd = workspaceService.getWorkspaceRoot();
+  loadEnvironment(loadSettings(cwd).merged, cwd);
   if (
     authMethod === AuthType.LOGIN_WITH_GOOGLE ||
     authMethod === AuthType.COMPUTE_ADC

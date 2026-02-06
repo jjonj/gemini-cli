@@ -85,12 +85,14 @@ import { SessionError, SessionSelector } from './utils/sessionUtils.js';
 import { relaunchOnExitCode } from './utils/relaunch.js';
 import { loadSandboxConfig } from './config/sandboxConfig.js';
 import { deleteSession, listSessions } from './utils/sessions.js';
+import { OmniHook } from './omni/turnTermination.js';
 import { createPolicyUpdater } from './config/policy.js';
 
 import { setupTerminalAndTheme } from './utils/terminalTheme.js';
 import { runDeferredCommand } from './deferred.js';
 import { cleanupBackgroundLogs } from './utils/logCleanup.js';
 import { SlashCommandConflictHandler } from './services/SlashCommandConflictHandler.js';
+import { startRemoteControl } from './omni/remoteControl.js';
 
 export function validateDnsResolutionOrder(
   order: string | undefined,
@@ -245,7 +247,7 @@ export async function startInteractiveUI(
   config: Config,
   settings: LoadedSettings,
   startupWarnings: StartupWarning[],
-  workspaceRoot: string = process.cwd(),
+  workspaceRoot: string = OmniHook.getWorkspaceRoot(),
   resumedSessionData: ResumedSessionData | undefined,
   initializationResult: InitializationResult,
 ) {
@@ -272,13 +274,6 @@ export async function main() {
   const adminControlsListner = setupAdminControlsListener();
   registerCleanup(adminControlsListner.cleanup);
 
-  const cleanupStdio = patchStdio();
-  registerSyncCleanup(() => {
-    // This is needed to ensure we don't lose any buffered output.
-    initializeOutputListenersAndFlush(config);
-    cleanupStdio();
-  });
-
   setupUnhandledRejectionHandler();
 
   setupSignalHandlers();
@@ -288,7 +283,7 @@ export async function main() {
   registerCleanup(() => slashCommandConflictHandler.stop());
 
   const loadSettingsHandle = startupProfiler.start('load_settings');
-  const settings = loadSettings();
+  let settings = loadSettings();
   loadSettingsHandle?.end();
 
   // If a worktree is requested and enabled, set it up early.
@@ -361,6 +356,8 @@ export async function main() {
       'Warning: tools.exclude in settings.json is deprecated and will be removed in 1.0. Migrate to Policy Engine: https://geminicli.com/docs/core/policy-engine/',
     );
   }
+
+  settings = OmniHook.initializeWorkspace(argv, settings);
 
   if (argv.startupMessages) {
     argv.startupMessages.forEach((msg) => {
@@ -532,6 +529,14 @@ export async function main() {
       process.exit(ExitCodes.SUCCESS);
     }
   }
+
+  const cleanupStdio = patchStdio();
+  startRemoteControl();
+  registerSyncCleanup(() => {
+    // This is needed to ensure we don't lose any buffered output.
+    initializeOutputListenersAndFlush();
+    cleanupStdio();
+  });
 
   // We are now past the logic handling potentially launching a child process
   // to run Gemini CLI. It is now safe to perform expensive initialization that
@@ -710,7 +715,7 @@ export async function main() {
         config,
         settings,
         startupWarnings,
-        process.cwd(),
+        OmniHook.getWorkspaceRoot(),
         resumedSessionData,
         initializationResult,
       );

@@ -10,6 +10,7 @@ import toml from '@iarna/toml';
 import { glob } from 'glob';
 import { z } from 'zod';
 import { Storage, coreEvents, type Config } from '@google/gemini-cli-core';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import type { ICommandLoader } from './types.js';
 import type {
   CommandContext,
@@ -78,7 +79,7 @@ export class FileCommandLoader implements ICommandLoader {
   constructor(private readonly config: Config | null) {
     this.folderTrustEnabled = !!config?.getFolderTrust();
     this.isTrustedFolder = !!config?.isTrustedFolder();
-    this.projectRoot = config?.getProjectRoot() || process.cwd();
+    this.projectRoot = config?.getProjectRoot() || workspaceService.getWorkspaceRoot();
   }
 
   /**

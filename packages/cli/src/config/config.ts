@@ -63,6 +63,7 @@ import { loadSandboxConfig } from './sandboxConfig.js';
 import { resolvePath } from '../utils/resolvePath.js';
 import { isRecord } from '../utils/settingsUtils.js';
 import { RESUME_LATEST } from '../utils/sessionUtils.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
 import {
@@ -100,6 +101,7 @@ export interface CliArgs {
   sessionId: string | undefined;
   listSessions: boolean | undefined;
   deleteSession: string | undefined;
+  workspace?: string | undefined;
   includeDirectories: string[] | undefined;
   screenReader: boolean | undefined;
   useWriteTodos: boolean | undefined;
@@ -179,6 +181,11 @@ export async function parseArguments(
       type: 'boolean',
       description: 'Run in debug mode (open debug console with F12)',
       default: false,
+    })
+    .option('workspace', {
+      alias: 'w',
+      type: 'string',
+      description: 'The initial workspace directory.',
     })
     .middleware((argv) => {
       const commandModules = [
@@ -570,15 +577,16 @@ export async function loadCliConfig(
   options: LoadCliConfigOptions = {},
 ): Promise<Config> {
   const {
-    cwd = process.cwd(),
+    cwd = workspaceService.getWorkspaceRoot(),
     projectHooks,
     skipExtensions = false,
     skipMemoryLoad = false,
   } = options;
+  const effectiveCwd = argv.workspace ? resolvePath(argv.workspace) : cwd;
   const debugMode = isDebugMode(argv);
 
   const worktreeSettings =
-    options.worktreeSettings ?? (await resolveWorktreeSettings(cwd));
+    options.worktreeSettings ?? (await resolveWorktreeSettings(effectiveCwd));
 
   if (argv.sandbox) {
     process.env['GEMINI_SANDBOX'] = 'true';
@@ -595,7 +603,7 @@ export async function loadCliConfig(
       ? false
       : (settings.security?.folderTrust?.enabled ?? false);
   const trustedFolder =
-    isWorkspaceTrusted(settings, cwd, {
+    isWorkspaceTrusted(settings, effectiveCwd, {
       prompt: argv.prompt,
       query: argv.query,
     })?.isTrusted ?? false;
@@ -611,7 +619,7 @@ export async function loadCliConfig(
     setServerGeminiMdFilename(getCurrentGeminiMdFilename());
   }
 
-  const fileService = new FileDiscoveryService(cwd);
+  const fileService = new FileDiscoveryService(effectiveCwd);
 
   const memoryFileFiltering = {
     ...DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
@@ -633,7 +641,7 @@ export async function loadCliConfig(
   // so Gemini has context of all open folders, not just the cwd.
   const ideWorkspacePath = process.env['GEMINI_CLI_IDE_WORKSPACE_PATH'];
   if (ideWorkspacePath) {
-    const realCwd = resolveToRealPath(cwd);
+    const realCwd = resolveToRealPath(effectiveCwd);
     const ideFolders = ideWorkspacePath.split(path.delimiter).filter((p) => {
       const trimmedPath = p.trim();
       if (!trimmedPath) return false;
@@ -655,7 +663,7 @@ export async function loadCliConfig(
       settings,
       requestConsent: requestConsentNonInteractive,
       requestSetting: promptForSetting,
-      workspaceDir: cwd,
+      workspaceDir: effectiveCwd,
       enabledExtensionOverrides: argv.extensions,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       eventEmitter: coreEvents as EventEmitter<ExtensionEvents>,
@@ -676,7 +684,7 @@ export async function loadCliConfig(
 
   if (extensionRegistryURI && !extensionRegistryURI.startsWith('http')) {
     extensionRegistryURI = resolveToRealPath(
-      path.resolve(cwd, resolvePath(extensionRegistryURI)),
+      path.resolve(effectiveCwd, resolvePath(extensionRegistryURI)),
     );
   }
 
@@ -690,7 +698,7 @@ export async function loadCliConfig(
   if (!experimentalJitContext && !skipMemoryLoad) {
     // Call the (now wrapper) loadHierarchicalGeminiMemory which calls the server's version
     const result = await loadServerHierarchicalMemory(
-      cwd,
+      effectiveCwd,
       settings.context?.loadMemoryFromIncludeDirectories || false
         ? includeDirectories
         : [],
@@ -842,7 +850,7 @@ export async function loadCliConfig(
 
   const { workspacePoliciesDir, policyUpdateConfirmationRequest } =
     await resolveWorkspacePolicyState({
-      cwd,
+      cwd: effectiveCwd,
       trustedFolder,
       interactive,
     });
@@ -977,7 +985,7 @@ export async function loadCliConfig(
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
     toolSandboxing: settings.security?.toolSandboxing ?? false,
-    targetDir: cwd,
+    targetDir: effectiveCwd,
     includeDirectoryTree,
     includeDirectories,
     loadMemoryFromIncludeDirectories:
@@ -1041,7 +1049,7 @@ export async function loadCliConfig(
       process.env['https_proxy'] ||
       process.env['HTTP_PROXY'] ||
       process.env['http_proxy'],
-    cwd,
+    cwd: effectiveCwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
     model: resolvedModel,
@@ -1123,7 +1131,7 @@ export async function loadCliConfig(
     projectHooks: projectHooks || {},
     onModelChange: (model: string) => saveModelChange(loadSettings(cwd), model),
     onReload: async () => {
-      const refreshedSettings = loadSettings(cwd);
+      const refreshedSettings = loadSettings(effectiveCwd);
       return {
         disabledSkills: refreshedSettings.merged.skills.disabled,
         agents: refreshedSettings.merged.agents,

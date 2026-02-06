@@ -26,6 +26,7 @@ import stripJsonComments from 'strip-json-comments';
 import { DefaultLight } from '../ui/themes/builtin/light/default-light.js';
 import { DefaultDark } from '../ui/themes/builtin/dark/default-dark.js';
 import { isWorkspaceTrusted } from './trustedFolders.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import {
   type Settings,
   type MergedSettings,
@@ -697,7 +698,7 @@ export function isWorktreeEnabled(settings: LoadedSettings): boolean {
  * Project settings override user settings.
  */
 export function loadSettings(
-  workspaceDir: string = process.cwd(),
+  workspaceDir: string = workspaceService.getWorkspaceRoot(),
 ): LoadedSettings {
   const normalizedWorkspaceDir = path.resolve(workspaceDir);
   return settingsCache.getOrCreate(normalizedWorkspaceDir, () =>

@@ -191,6 +191,8 @@ import {
   isToolAwaitingConfirmation,
   getAllToolCalls,
 } from './utils/historyUtils.js';
+import { OmniDialogManager } from '../omni/OmniDialogManager.js';
+import { OmniHook } from '../omni/turnTermination.js';
 
 interface AppContainerProps {
   config: Config;
@@ -1779,10 +1781,16 @@ Logging in with Google... Restarting Gemini CLI to continue.
     };
     appEvents.on(AppEvent.OpenDebugConsole, openDebugConsole);
 
+    const cleanupRemote = OmniHook.registerRemoteHandlers({
+      handleFinalSubmit,
+      getHistory: () => historyManager.history,
+    });
+
     return () => {
       appEvents.off(AppEvent.OpenDebugConsole, openDebugConsole);
+      cleanupRemote();
     };
-  }, [config]);
+  }, [handleFinalSubmit, historyManager.history]);
 
   const handleEscapePromptChange = useCallback((showPrompt: boolean) => {
     setShowEscapePrompt(showPrompt);
@@ -2868,6 +2876,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
                   toggleAllExpansion={toggleAllExpansion}
                 >
                   <ShellFocusContext.Provider value={isFocused}>
+                    <OmniDialogManager />
                     <MouseProvider mouseEventsEnabled={mouseMode}>
                       <ScrollProvider>
                         <App key={`app-${forceRerenderKey}`} />

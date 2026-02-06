@@ -12,6 +12,7 @@ import {
   type LoadedTrustedFolders,
 } from '@google/gemini-cli-core';
 import type { Settings } from './settings.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 
 export {
   TrustLevel,
@@ -38,12 +39,9 @@ export function loadTrustedFolders(): LoadedTrustedFolders {
   return loadCoreTrustedFolders();
 }
 
-/**
- * Returns true or false if the workspace is considered "trusted".
- */
 export function isWorkspaceTrusted(
   settings: Settings,
-  workspaceDir: string = process.cwd(),
+  workspaceDir: string = workspaceService.getWorkspaceRoot(),
   headlessOptions?: HeadlessModeOptions,
 ): {
   isTrusted: boolean | undefined;
