@@ -56,10 +56,7 @@ import {
   type ExtensionUpdateAction,
   type ExtensionUpdateStatus,
 } from '../state/extensions.js';
-import {
-  LogoutConfirmationDialog,
-  LogoutChoice,
-} from '../components/LogoutConfirmationDialog.js';
+import { LogoutConfirmationDialog, LogoutChoice } from '../components/LogoutConfirmationDialog.js';
 import { runExitCleanup } from '../../utils/cleanup.js';
 
 interface SlashCommandProcessorActions {

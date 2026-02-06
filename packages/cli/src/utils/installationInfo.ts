@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as childProcess from 'node:child_process';
 import process from 'node:process';
+import { workspaceService } from '../omni/WorkspaceService.js';
 
 export const isDevelopment = process.env['NODE_ENV'] === 'development';
 
@@ -44,7 +45,7 @@ export function getInstallationInfo(
     // Normalize path separators to forward slashes for consistent matching.
     const realPath = fs.realpathSync(cliPath).replace(/\\/g, '/');
     const normalizedProjectRoot = projectRoot?.replace(/\\/g, '/');
-    const isGit = isGitRepository(process.cwd());
+    const isGit = isGitRepository(workspaceService.getWorkspaceRoot());
 
     // Check for local git clone first
     if (

@@ -17,6 +17,7 @@ import {
   startupProfiler,
   getAdminErrorMessage,
 } from '@google/gemini-cli-core';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import { aboutCommand } from '../ui/commands/aboutCommand.js';
 import { agentsCommand } from '../ui/commands/agentsCommand.js';
 import { authCommand } from '../ui/commands/authCommand.js';
@@ -74,7 +75,7 @@ export class BuiltinCommandLoader implements ICommandLoader {
   async loadCommands(_signal: AbortSignal): Promise<SlashCommand[]> {
     const handle = startupProfiler.start('load_builtin_commands');
 
-    const isNightlyBuild = await isNightly(process.cwd());
+    const isNightlyBuild = await isNightly(workspaceService.getWorkspaceRoot());
 
     const allDefinitions: Array<SlashCommand | null> = [
       aboutCommand,

@@ -7,6 +7,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
 import type { HistoryItem } from '../types.js';
 import type { ChatRecordingService } from '@google/gemini-cli-core/src/services/chatRecordingService.js';
+import { OmniHook } from '../../omni/turnTermination.js';
 
 // Type for the updater function passed to updateHistoryItem
 type HistoryItemUpdater = (
@@ -78,6 +79,9 @@ export function useHistory({
         }
         return [...prevHistory, newItem];
       });
+
+      // Forward to remote listeners
+      OmniHook.onHistoryItemAdded(newItem);
 
       // Record UI-specific messages, but don't do it if we're actually loading
       // an existing session.

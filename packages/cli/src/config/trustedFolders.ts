@@ -16,6 +16,7 @@ import {
 } from '@google/gemini-cli-core';
 import type { Settings } from './settings.js';
 import stripJsonComments from 'strip-json-comments';
+import { workspaceService } from '../omni/WorkspaceService.js';
 
 export const TRUSTED_FOLDERS_FILENAME = 'trustedFolders.json';
 
@@ -279,7 +280,7 @@ function getWorkspaceTrustFromLocalConfig(
 
 export function isWorkspaceTrusted(
   settings: Settings,
-  workspaceDir: string = process.cwd(),
+  workspaceDir: string = workspaceService.getWorkspaceRoot(),
   trustConfig?: Record<string, TrustLevel>,
 ): TrustResult {
   if (!isFolderTrustEnabled(settings)) {

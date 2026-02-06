@@ -21,6 +21,7 @@ This document tracks the persistent local modifications and structural additions
     - **Named Pipe Server:** Background server at `\\.\pipe\omni-gemini-cli-<PID>` for real-time monitoring and control.
     - **Handshake Support:** `OmniDialogManager.tsx` provides a "ready" signal for external tools.
     - **Remote Event Mapping:** Specialized handlers for `RemotePrompt` and `RequestRemoteHistory`.
+    - **Tool Call Rendering Fix:** Prepend `Tool Call: ` to `AppEvent.RemoteToolCall` messages in `turnTermination.ts` for proper Android app rendering.
 
 ## Re-implemented Features (Bootstrapped)
 - **Omni Logger:** High-fidelity API error logging and conversation snapshots to `Omni/api_errors.log`.  

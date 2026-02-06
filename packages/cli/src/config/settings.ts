@@ -22,6 +22,7 @@ import stripJsonComments from 'strip-json-comments';
 import { DefaultLight } from '../ui/themes/default-light.js';
 import { DefaultDark } from '../ui/themes/default.js';
 import { isWorkspaceTrusted } from './trustedFolders.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import {
   type Settings,
   type MergedSettings,
@@ -561,7 +562,7 @@ export function loadEnvironment(
  * Project settings override user settings.
  */
 export function loadSettings(
-  workspaceDir: string = process.cwd(),
+  workspaceDir: string = workspaceService.getWorkspaceRoot(),
 ): LoadedSettings {
   let systemSettings: Settings = {};
   let systemDefaultSettings: Settings = {};

@@ -95,6 +95,7 @@ import {
 } from './utils/relaunch.js';
 import { loadSandboxConfig } from './config/sandboxConfig.js';
 import { deleteSession, listSessions } from './utils/sessions.js';
+import { OmniHook } from './omni/turnTermination.js';
 import { createPolicyUpdater } from './config/policy.js';
 import { ScrollProvider } from './ui/contexts/ScrollProvider.js';
 import { isAlternateBufferEnabled } from './ui/hooks/useAlternateBuffer.js';
@@ -103,6 +104,7 @@ import { TerminalProvider } from './ui/contexts/TerminalContext.js';
 import { setupTerminalAndTheme } from './utils/terminalTheme.js';
 import { profiler } from './ui/components/DebugProfiler.js';
 import { runDeferredCommand } from './deferred.js';
+import { startRemoteControl } from './omni/remoteControl.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -180,7 +182,7 @@ export async function startInteractiveUI(
   config: Config,
   settings: LoadedSettings,
   startupWarnings: string[],
-  workspaceRoot: string = process.cwd(),
+  workspaceRoot: string = OmniHook.getWorkspaceRoot(),
   resumedSessionData: ResumedSessionData | undefined,
   initializationResult: InitializationResult,
 ) {
@@ -301,16 +303,9 @@ export async function main() {
   const adminControlsListner = setupAdminControlsListener();
   registerCleanup(adminControlsListner.cleanup);
 
-  const cleanupStdio = patchStdio();
-  registerSyncCleanup(() => {
-    // This is needed to ensure we don't lose any buffered output.
-    initializeOutputListenersAndFlush();
-    cleanupStdio();
-  });
-
   setupUnhandledRejectionHandler();
   const loadSettingsHandle = startupProfiler.start('load_settings');
-  const settings = loadSettings();
+  let settings = loadSettings();
   loadSettingsHandle?.end();
 
   // Report settings errors once during startup
@@ -334,6 +329,8 @@ export async function main() {
   const parseArgsHandle = startupProfiler.start('parse_arguments');
   const argv = await parseArguments(settings.merged);
   parseArgsHandle?.end();
+
+  settings = OmniHook.initializeWorkspace(argv, settings);
 
   if (argv.startupMessages) {
     argv.startupMessages.forEach((msg) => {
@@ -501,6 +498,14 @@ export async function main() {
     }
   }
 
+  const cleanupStdio = patchStdio();
+  startRemoteControl();
+  registerSyncCleanup(() => {
+    // This is needed to ensure we don't lose any buffered output.
+    initializeOutputListenersAndFlush();
+    cleanupStdio();
+  });
+
   // We are now past the logic handling potentially launching a child process
   // to run Gemini CLI. It is now safe to perform expensive initialization that
   // may have side effects.
@@ -659,7 +664,7 @@ export async function main() {
         config,
         settings,
         startupWarnings,
-        process.cwd(),
+        OmniHook.getWorkspaceRoot(),
         resumedSessionData,
         initializationResult,
       );

@@ -39,3 +39,5 @@ export const DEFAULT_BACKGROUND_OPACITY = 0.08;
 export const KEYBOARD_SHORTCUTS_URL =
   'https://geminicli.com/docs/cli/keyboard-shortcuts/';
 export const LRU_BUFFER_PERF_CACHE_LIMIT = 20000;
+
+export const FORCE_END_TURN_STRING = '[FORCE-END-TURN]';

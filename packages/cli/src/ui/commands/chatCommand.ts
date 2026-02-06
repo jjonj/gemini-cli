@@ -28,6 +28,7 @@ import type {
 import { MessageType } from '../types.js';
 import { exportHistoryToFile } from '../utils/historyExportUtils.js';
 import { convertToRestPayload } from '@google/gemini-cli-core';
+import { workspaceService } from '../../omni/WorkspaceService.js';
 
 const getSavedChatTags = async (
   context: CommandContext,
@@ -352,7 +353,7 @@ export const debugCommand: SlashCommand = {
 
     const restPayload = convertToRestPayload(req);
     const filename = `gcli-request-${Date.now()}.json`;
-    const filePath = path.join(process.cwd(), filename);
+    const filePath = path.join(workspaceService.getWorkspaceRoot(), filename);
 
     try {
       await fsPromises.writeFile(

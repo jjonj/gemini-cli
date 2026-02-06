@@ -142,6 +142,8 @@ import { NewAgentsChoice } from './components/NewAgentsNotification.js';
 import { isSlashCommand } from './utils/commandUtils.js';
 import { useTerminalTheme } from './hooks/useTerminalTheme.js';
 import { isITerm2 } from './utils/terminalUtils.js';
+import { OmniDialogManager } from '../omni/OmniDialogManager.js';
+import { OmniHook } from '../omni/turnTermination.js';
 
 function isToolExecuting(pendingHistoryItems: HistoryItemWithoutId[]) {
   return pendingHistoryItems.some((item) => {
@@ -1358,10 +1360,16 @@ Logging in with Google... Restarting Gemini CLI to continue.
     };
     appEvents.on(AppEvent.OpenDebugConsole, openDebugConsole);
 
+    const cleanupRemote = OmniHook.registerRemoteHandlers({
+      handleFinalSubmit,
+      getHistory: () => historyManager.history,
+    });
+
     return () => {
       appEvents.off(AppEvent.OpenDebugConsole, openDebugConsole);
+      cleanupRemote();
     };
-  }, [config]);
+  }, [handleFinalSubmit, historyManager.history]);
 
   useEffect(() => {
     if (ctrlCTimerRef.current) {
@@ -2173,6 +2181,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
           >
             <ToolActionsProvider config={config} toolCalls={allToolCalls}>
               <ShellFocusContext.Provider value={isFocused}>
+                <OmniDialogManager />
                 <App />
               </ShellFocusContext.Provider>
             </ToolActionsProvider>
