@@ -48,6 +48,8 @@ export interface CommandContext {
   ui: {
     /** Adds a new item to the history display. */
     addItem: UseHistoryManagerReturn['addItem'];
+    /** Reverts the history by one turn (User + Gemini response) */
+    undo: () => void;
     /** Clears all history items and the console screen. */
     clear: () => void;
     /**

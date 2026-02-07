@@ -8,6 +8,7 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 import type { HistoryItem } from '../types.js';
 import type { ChatRecordingService } from '@google/gemini-cli-core/src/services/chatRecordingService.js';
 import { OmniHook } from '../../omni/turnTermination.js';
+import { undoHistory } from '../../omni/undoHistory.js';
 
 // Type for the updater function passed to updateHistoryItem
 type HistoryItemUpdater = (
@@ -25,6 +26,7 @@ export interface UseHistoryManagerReturn {
     id: number,
     updates: Partial<Omit<HistoryItem, 'id'>> | HistoryItemUpdater,
   ) => void;
+  undo: () => void;
   clearItems: () => void;
   loadHistory: (newHistory: HistoryItem[]) => void;
 }
@@ -158,14 +160,20 @@ export function useHistory({
     messageIdCounterRef.current = 0;
   }, []);
 
+  // Reverts the history by one turn (User + Gemini response)
+  const undo = useCallback(() => {
+    setHistory((prev) => undoHistory(prev));
+  }, []);
+
   return useMemo(
     () => ({
       history,
       addItem,
       updateItem,
+      undo,
       clearItems,
       loadHistory,
     }),
-    [history, addItem, updateItem, clearItems, loadHistory],
+    [history, addItem, updateItem, undo, clearItems, loadHistory],
   );
 }

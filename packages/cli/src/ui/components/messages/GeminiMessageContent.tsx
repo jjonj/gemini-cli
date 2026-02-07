@@ -10,12 +10,14 @@ import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
 import { ShowMoreLines } from '../ShowMoreLines.js';
 import { useUIState } from '../../contexts/UIStateContext.js';
 import { useAlternateBuffer } from '../../hooks/useAlternateBuffer.js';
+import { RevertedWrapper } from '../../../omni/RevertedWrapper.js';
 
 interface GeminiMessageContentProps {
   text: string;
   isPending: boolean;
   availableTerminalHeight?: number;
   terminalWidth: number;
+  reverted?: boolean;
 }
 
 /*
@@ -29,6 +31,7 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
   isPending,
   availableTerminalHeight,
   terminalWidth,
+  reverted,
 }) => {
   const { renderMarkdown } = useUIState();
   const isAlternateBuffer = useAlternateBuffer();
@@ -37,22 +40,24 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
 
   return (
     <Box flexDirection="column" paddingLeft={prefixWidth}>
-      <MarkdownDisplay
-        text={text}
-        isPending={isPending}
-        availableTerminalHeight={
-          isAlternateBuffer || availableTerminalHeight === undefined
-            ? undefined
-            : Math.max(availableTerminalHeight - 1, 1)
-        }
-        terminalWidth={terminalWidth}
-        renderMarkdown={renderMarkdown}
-      />
-      <Box marginBottom={1}>
-        <ShowMoreLines
-          constrainHeight={availableTerminalHeight !== undefined}
+      <RevertedWrapper reverted={reverted} text={text}>
+        <MarkdownDisplay
+          text={text}
+          isPending={isPending}
+          availableTerminalHeight={
+            isAlternateBuffer || availableTerminalHeight === undefined
+              ? undefined
+              : Math.max(availableTerminalHeight - 1, 1)
+          }
+          terminalWidth={terminalWidth}
+          renderMarkdown={renderMarkdown}
         />
-      </Box>
+        <Box marginBottom={1}>
+          <ShowMoreLines
+            constrainHeight={availableTerminalHeight !== undefined}
+          />
+        </Box>
+      </RevertedWrapper>
     </Box>
   );
 };

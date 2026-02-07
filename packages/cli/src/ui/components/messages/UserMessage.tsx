@@ -17,20 +17,31 @@ import {
 import { HalfLinePaddedBox } from '../shared/HalfLinePaddedBox.js';
 import { DEFAULT_BACKGROUND_OPACITY } from '../../constants.js';
 import { useConfig } from '../../contexts/ConfigContext.js';
+import { RevertedWrapper } from '../../../omni/RevertedWrapper.js';
+import { getRevertedColor } from '../../../omni/undoStyles.js';
 
 interface UserMessageProps {
   text: string;
   width: number;
+  reverted?: boolean;
 }
 
-export const UserMessage: React.FC<UserMessageProps> = ({ text, width }) => {
+export const UserMessage: React.FC<UserMessageProps> = ({
+  text,
+  width,
+  reverted,
+}) => {
   const prefix = '> ';
   const prefixWidth = prefix.length;
   const isSlashCommand = checkIsSlashCommand(text);
   const config = useConfig();
   const useBackgroundColor = config.getUseBackgroundColor();
 
-  const textColor = isSlashCommand ? theme.text.accent : theme.text.secondary;
+  const textColor = reverted
+    ? getRevertedColor()
+    : isSlashCommand
+      ? theme.text.accent
+      : theme.text.secondary;
 
   const displayText = useMemo(() => {
     if (!text) return text;
@@ -66,16 +77,18 @@ export const UserMessage: React.FC<UserMessageProps> = ({ text, width }) => {
       >
         <Box width={prefixWidth} flexShrink={0}>
           <Text
-            color={theme.text.accent}
+            color={reverted ? getRevertedColor() : theme.text.accent}
             aria-label={SCREEN_READER_USER_PREFIX}
           >
             {prefix}
           </Text>
         </Box>
         <Box flexGrow={1}>
-          <Text wrap="wrap" color={textColor}>
-            {displayText}
-          </Text>
+          <RevertedWrapper reverted={reverted} text={displayText}>
+            <Text wrap="wrap" color={textColor}>
+              {displayText}
+            </Text>
+          </RevertedWrapper>
         </Box>
       </Box>
     </HalfLinePaddedBox>

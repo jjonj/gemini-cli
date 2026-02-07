@@ -105,6 +105,7 @@ import { setupTerminalAndTheme } from './utils/terminalTheme.js';
 import { profiler } from './ui/components/DebugProfiler.js';
 import { runDeferredCommand } from './deferred.js';
 import { startRemoteControl } from './omni/remoteControl.js';
+import { bootstrapOmni } from './omni/bootstrap.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -294,6 +295,7 @@ export async function startInteractiveUI(
 }
 
 export async function main() {
+  bootstrapOmni();
   const cliStartupHandle = startupProfiler.start('cli_startup');
 
   // Listen for admin controls from parent process (IPC) in non-sandbox mode. In

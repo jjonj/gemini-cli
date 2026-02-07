@@ -78,6 +78,7 @@ describe('App', () => {
       addItem: vi.fn(),
       history: [],
       updateItem: vi.fn(),
+      undo: vi.fn(),
       clearItems: vi.fn(),
       loadHistory: vi.fn(),
     },

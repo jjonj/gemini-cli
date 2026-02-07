@@ -947,6 +947,14 @@ export class GeminiChat {
     return this.chatRecordingService;
   }
 
+  rollbackDeep(): void {
+    // To be overridden by Omni bootstrap
+  }
+
+  rollbackTurn(): void {
+    // To be overridden by Omni bootstrap
+  }
+
   /**
    * Records completed tool calls with full metadata.
    * This is called by external components when tool calls complete, before sending responses to Gemini.

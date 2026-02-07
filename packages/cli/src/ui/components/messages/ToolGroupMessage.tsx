@@ -18,6 +18,8 @@ import { isShellTool, isThisShellFocused } from './ToolShared.js';
 import { ASK_USER_DISPLAY_NAME } from '@google/gemini-cli-core';
 import { ShowMoreLines } from '../ShowMoreLines.js';
 import { useUIState } from '../../contexts/UIStateContext.js';
+import { getRevertedBorderColor } from '../../../omni/undoStyles.js';
+import { RevertedIndicator } from '../../../omni/RevertedWrapper.js';
 
 interface ToolGroupMessageProps {
   groupId: number;
@@ -30,6 +32,7 @@ interface ToolGroupMessageProps {
   onShellInputSubmit?: (input: string) => void;
   borderTop?: boolean;
   borderBottom?: boolean;
+  reverted?: boolean;
 }
 
 // Helper to identify Ask User tools that are in progress (have their own dialog UI)
@@ -51,6 +54,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   embeddedShellFocused,
   borderTop: borderTopOverride,
   borderBottom: borderBottomOverride,
+  reverted,
 }) => {
   // Filter out in-progress Ask User tools (they have their own AskUserDialog UI)
   const toolCalls = useMemo(
@@ -95,15 +99,16 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   );
 
   const isShellCommand = toolCalls.some((t) => isShellTool(t.name));
-  const borderColor =
-    (isShellCommand && hasPending) || isEmbeddedShellFocused
+  const borderColor = reverted
+    ? getRevertedBorderColor()
+    : (isShellCommand && hasPending) || isEmbeddedShellFocused
       ? theme.ui.symbol
       : hasPending
         ? theme.status.warning
         : theme.border.default;
 
   const borderDimColor =
-    hasPending && (!isShellCommand || !isEmbeddedShellFocused);
+    !reverted && hasPending && (!isShellCommand || !isEmbeddedShellFocused);
 
   const staticHeight = /* border */ 2 + /* marginBottom */ 1;
 
@@ -156,6 +161,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
       */
       width={terminalWidth}
     >
+      <RevertedIndicator reverted={reverted} />
       {visibleToolCalls.map((tool, index) => {
         const isConfirming = toolAwaitingApproval?.callId === tool.callId;
         const isFirst = index === 0;

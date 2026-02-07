@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import time  # <-- added for sleep
+import os
 
 def run_command(command):
     print(f"Running: {' '.join(command)}")
@@ -13,6 +14,12 @@ def run_command(command):
 def main():
     print("Rebuilding the project...")
     
+    if not os.path.exists("package-lock.json"):
+        print("package-lock.json missing, generating...")
+        if not run_command(["npm", "install", "--package-lock-only"]):
+            print("Failed to generate package-lock.json.")
+            sys.exit(1)
+
     print("Step 1/3: npm install")
     if not run_command(["npm", "install"]):
         print("Failed to install dependencies.")

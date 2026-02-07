@@ -101,6 +101,7 @@ export const emptyIcon = '  ';
 
 export interface HistoryItemBase {
   text?: string; // Text content for user/gemini/info/error messages
+  reverted?: boolean; // Whether this turn has been undone
 }
 
 export type HistoryItemUser = HistoryItemBase & {

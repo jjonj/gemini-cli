@@ -31,6 +31,7 @@ describe('useSessionResume', () => {
     history: [],
     addItem: vi.fn(),
     updateItem: vi.fn(),
+    undo: vi.fn(),
     clearItems: vi.fn(),
     loadHistory: vi.fn(),
   });
