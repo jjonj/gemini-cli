@@ -8,12 +8,14 @@ import type React from 'react';
 import { Box } from 'ink';
 import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
 import { useUIState } from '../../contexts/UIStateContext.js';
+import { RevertedWrapper } from '../../../omni/RevertedWrapper.js';
 
 interface GeminiMessageContentProps {
   text: string;
   isPending: boolean;
   availableTerminalHeight?: number;
   terminalWidth: number;
+  reverted?: boolean;
 }
 
 /*
@@ -27,6 +29,7 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
   isPending,
   availableTerminalHeight,
   terminalWidth,
+  reverted,
 }) => {
   const { renderMarkdown } = useUIState();
   const originalPrefix = '✦ ';
@@ -34,17 +37,19 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
 
   return (
     <Box flexDirection="column" paddingLeft={prefixWidth}>
-      <MarkdownDisplay
-        text={text}
-        isPending={isPending}
-        availableTerminalHeight={
-          availableTerminalHeight === undefined
-            ? undefined
-            : Math.max(availableTerminalHeight - 1, 1)
-        }
-        terminalWidth={Math.max(terminalWidth - prefixWidth, 0)}
-        renderMarkdown={renderMarkdown}
-      />
+      <RevertedWrapper reverted={reverted} text={text}>
+        <MarkdownDisplay
+          text={text}
+          isPending={isPending}
+          availableTerminalHeight={
+            availableTerminalHeight === undefined
+              ? undefined
+              : Math.max(availableTerminalHeight - 1, 1)
+          }
+          terminalWidth={Math.max(terminalWidth - prefixWidth, 0)}
+          renderMarkdown={renderMarkdown}
+        />
+      </RevertedWrapper>
     </Box>
   );
 };

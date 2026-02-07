@@ -1040,6 +1040,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     config,
     settings,
     historyManager.addItem,
+    historyManager.undo,
     historyManager.clearItems,
     historyManager.loadHistory,
     refreshStatic,

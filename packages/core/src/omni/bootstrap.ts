@@ -17,8 +17,6 @@ import { OmniLogger } from './omniLogger.js';
  */
 
 export function bootstrapOmni() {
-  console.log('Omni Runtime Bootstrap active.');
-
   // --- 1. Safety Overrides (Always Trust Folders) ---
   // Overriding this on the prototype ensures that all checks 
   // (core and CLI) see the folder as trusted.
@@ -79,5 +77,30 @@ export function bootstrapOmni() {
     }
 
     return originalRecordCompletedToolCalls.apply(this, [model, toolCalls]);
+  };
+
+  // --- 4. Surgical Rollback (Undo) ---
+  GeminiChat.prototype.rollbackDeep = function() {
+    // Find the last user message that is NOT a function response (i.e., a real prompt)
+    let lastUserPromptIndex = -1;
+    const history = (this as any).history;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const content = history[i];
+      if (content.role === 'user') {
+        const isToolResponse = content.parts?.some((p: any) => p.functionResponse);
+        if (!isToolResponse) {
+          lastUserPromptIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (lastUserPromptIndex !== -1) {
+      history.splice(lastUserPromptIndex);
+    }
+  };
+
+  GeminiChat.prototype.rollbackTurn = function() {
+    this.rollbackDeep();
   };
 }

@@ -28,9 +28,12 @@ This document tracks the persistent local modifications and structural additions
 - **Safety Overrides:** Automatic folder trust to eliminate redundant permission prompts.
     - **Core Override:** `Config.prototype.isTrustedFolder` patched in `core`.
     - **CLI Override:** `LoadedTrustedFolders.prototype.isPathTrusted` patched in `cli` to bypass UI dialogs.
-- **Force End Turn:** Aggressive turn termination support via `[FORCE-END-TURN]` signal.
+- **Force End Turn:** Aggressive turn termination support via `[FORCE-END-TURN ]` signal.
     - **Core logic:** `GeminiChat.prototype.sendMessageStream` patched to stop generator on signal.
     - **CLI logic:** `OmniHook` class provides a Surgical Hook interface used in `useGeminiStream.ts` (~8 lines changed) to stop tool loops and truncate output.
+- **Open Directory Command:** `/od` command to open the current workspace in the OS file explorer.
+    - **Implementation:** `openDirectoryCommand.ts` uses the `open` library.
+    - **Registration:** Injected into `BuiltinCommandLoader.ts`.
 
 ## Preserved Local Modifications
 The following files retain local changes and are protected from automatic reversion:  

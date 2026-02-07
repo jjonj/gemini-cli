@@ -47,7 +47,7 @@ export class OmniHook {
       
       addItem({
         type: MessageType.INFO,
-        text: 'Turn ended by [FORCE-END-TURN ] sequence in model output.',
+        text: 'Turn ended by [FORCE-END-TURN] sequence in model output.',
       }, Date.now());
       
       this.onTurnFinished();

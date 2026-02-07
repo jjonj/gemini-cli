@@ -6,6 +6,9 @@
 
 import { bootstrapOmni as bootstrapCore } from '@google/gemini-cli-core';
 import * as trustedFolders from '../config/trustedFolders.js';
+import { BuiltinCommandLoader } from '../services/BuiltinCommandLoader.js';
+import { undoCommand } from './undoCommand.js';
+import { openDirectoryCommand } from './openDirectoryCommand.js';
 
 /**
  * Omni CLI Runtime Bootstrap
@@ -21,5 +24,16 @@ export function bootstrapOmni() {
   // @ts-ignore - patching the class prototype
   trustedFolders.LoadedTrustedFolders.prototype.isPathTrusted = function() {
     return true;
+  };
+
+  // --- 5. Omni Command Injection ---
+  // Monkey-patch BuiltinCommandLoader to inject Omni-specific commands
+  // without modifying the core loader file.
+  const originalLoadCommands = BuiltinCommandLoader.prototype.loadCommands;
+  BuiltinCommandLoader.prototype.loadCommands = async function(signal: AbortSignal) {
+    const commands = await originalLoadCommands.call(this, signal);
+    commands.push(undoCommand);
+    commands.push(openDirectoryCommand);
+    return commands;
   };
 }

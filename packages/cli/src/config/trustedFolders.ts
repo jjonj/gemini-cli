@@ -9,7 +9,7 @@ import {
   checkPathTrust,
   isHeadlessMode,
   loadTrustedFolders as loadCoreTrustedFolders,
-  type LoadedTrustedFolders,
+  LoadedTrustedFolders,
 } from '@google/gemini-cli-core';
 import type { Settings } from './settings.js';
 import { workspaceService } from '../omni/WorkspaceService.js';
@@ -19,6 +19,7 @@ export {
   isTrustLevel,
   resetTrustedFoldersForTesting,
   saveTrustedFolders,
+  LoadedTrustedFolders,
 } from '@google/gemini-cli-core';
 
 export type {
@@ -26,7 +27,6 @@ export type {
   TrustedFoldersError,
   TrustedFoldersFile,
   TrustResult,
-  LoadedTrustedFolders,
 } from '@google/gemini-cli-core';
 
 /** Is folder trust feature enabled per the current applied settings */

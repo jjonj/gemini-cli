@@ -93,6 +93,7 @@ import { runDeferredCommand } from './deferred.js';
 import { cleanupBackgroundLogs } from './utils/logCleanup.js';
 import { SlashCommandConflictHandler } from './services/SlashCommandConflictHandler.js';
 import { startRemoteControl } from './omni/remoteControl.js';
+import { bootstrapOmni } from './omni/bootstrap.js';
 
 export function validateDnsResolutionOrder(
   order: string | undefined,
@@ -264,6 +265,7 @@ export async function startInteractiveUI(
 }
 
 export async function main() {
+  bootstrapOmni();
   let config: Config | undefined;
   const cliStartupHandle = startupProfiler.start('cli_startup');
 

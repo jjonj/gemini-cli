@@ -43,6 +43,8 @@ import {
   TOOL_RESULT_STATIC_HEIGHT,
   TOOL_RESULT_STANDARD_RESERVED_LINE_COUNT,
 } from '../../utils/toolLayoutUtils.js';
+import { getRevertedBorderColor } from '../../../omni/undoStyles.js';
+import { RevertedIndicator } from '../../../omni/RevertedWrapper.js';
 
 const COMPACT_OUTPUT_ALLOWLIST = new Set([
   EDIT_DISPLAY_NAME,
@@ -102,6 +104,7 @@ interface ToolGroupMessageProps {
   borderTop?: boolean;
   borderBottom?: boolean;
   isExpandable?: boolean;
+  reverted?: boolean;
 }
 
 // Main component renders the border and maps the tools using ToolMessage
@@ -115,6 +118,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   borderTop: borderTopOverride,
   borderBottom: borderBottomOverride,
   isExpandable,
+  reverted,
 }) => {
   const settings = useSettings();
   const isLowErrorVerbosity = settings.merged.ui?.errorVerbosity !== 'full';
@@ -142,23 +146,27 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
 
   const config = useConfig();
 
-  const { borderColor, borderDimColor } = useMemo(
-    () =>
-      getToolGroupBorderAppearance(
+  const { borderColor: baseBorderColor, borderDimColor: baseBorderDimColor } =
+    useMemo(
+      () =>
+        getToolGroupBorderAppearance(
+          item,
+          activePtyId,
+          embeddedShellFocused,
+          pendingHistoryItems,
+          backgroundTasks,
+        ),
+      [
         item,
         activePtyId,
         embeddedShellFocused,
         pendingHistoryItems,
         backgroundTasks,
-      ),
-    [
-      item,
-      activePtyId,
-      embeddedShellFocused,
-      pendingHistoryItems,
-      backgroundTasks,
-    ],
-  );
+      ],
+    );
+
+  const borderColor = reverted ? getRevertedBorderColor() : baseBorderColor;
+  const borderDimColor = reverted ? false : baseBorderDimColor;
 
   const groupedTools = useMemo(() => {
     const groups: Array<
@@ -344,6 +352,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
             borderStyle="round"
           />
         )}
+      <RevertedIndicator reverted={reverted} />
       {groupedTools.map((group, index) => {
         let isFirst = index === 0;
         if (!isFirst) {

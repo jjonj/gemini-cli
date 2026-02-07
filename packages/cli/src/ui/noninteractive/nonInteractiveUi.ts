@@ -26,6 +26,7 @@ export function createNonInteractiveUI(): CommandContext['ui'] {
       }
       return 0;
     },
+    undo: () => {},
     clear: () => {},
     setDebugMessage: (_message) => {},
     loadHistory: (_newHistory) => {},
