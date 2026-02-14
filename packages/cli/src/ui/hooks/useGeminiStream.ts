@@ -92,12 +92,6 @@ interface ShellToolData {
   initialOutput?: string;
 }
 
-enum StreamProcessingStatus {
-  Completed,
-  UserCancelled,
-  Error,
-}
-
 function isShellToolData(data: unknown): data is ShellToolData {
   if (typeof data !== 'object' || data === null) {
     return false;
@@ -1076,9 +1070,10 @@ export const useGeminiStream = (
       stream: AsyncIterable<GeminiEvent>,
       userMessageTimestamp: number,
       signal: AbortSignal,
-    ): Promise<StreamProcessingStatus> => {
+    ): Promise<Parameters<typeof OmniHook.onTurnFinished>[0] | undefined> => {
       let geminiMessageBuffer = '';
       const toolCallRequests: ToolCallRequestInfo[] = [];
+      let turnEndPayload: Parameters<typeof OmniHook.onTurnFinished>[0];
       for await (const event of stream) {
         switch (event.type) {
           case ServerGeminiEventType.Thought:
@@ -1138,6 +1133,7 @@ export const useGeminiStream = (
             break;
           case ServerGeminiEventType.Finished:
             handleFinishedEvent(event, userMessageTimestamp);
+            turnEndPayload = OmniHook.turnEndFromFinished(event);
             break;
           case ServerGeminiEventType.Citation:
             handleCitationEvent(event.value, userMessageTimestamp);
@@ -1167,8 +1163,11 @@ export const useGeminiStream = (
           setPendingHistoryItem(null);
         }
         await scheduleToolCalls(toolCallRequests, signal);
+        if (!turnEndPayload && turnCancelledRef.current) {
+          turnEndPayload = OmniHook.turnEndForcedToolOutput();
+        }
       }
-      return StreamProcessingStatus.Completed;
+      return turnEndPayload;
     },
     [
       handleContentEvent,
@@ -1224,6 +1223,8 @@ export const useGeminiStream = (
             prompt_id = config.getSessionId() + '########' + getPromptCount();
           }
           return promptIdContext.run(prompt_id, async () => {
+            let turnEndPayload: Parameters<typeof OmniHook.onTurnFinished>[0];
+
             const { queryToSend, shouldProceed } = await prepareQueryForGemini(
               query,
               userMessageTimestamp,
@@ -1233,7 +1234,9 @@ export const useGeminiStream = (
 
             if (!shouldProceed || queryToSend === null) {
               if (activeQueryIdRef.current === queryId) {
-                OmniHook.onTurnFinished();
+                OmniHook.onTurnFinished(
+                  OmniHook.turnEndNoQuerySubmitted(prompt_id!),
+                );
               }
               return;
             }
@@ -1272,15 +1275,11 @@ export const useGeminiStream = (
                 false,
                 query,
               );
-              const processingStatus = await processGeminiStreamEvents(
+              turnEndPayload = await processGeminiStreamEvents(
                 stream,
                 userMessageTimestamp,
                 abortSignal,
               );
-
-              if (processingStatus === StreamProcessingStatus.UserCancelled) {
-                return;
-              }
 
               if (pendingHistoryItemRef.current) {
                 addItem(pendingHistoryItemRef.current, userMessageTimestamp);
@@ -1324,6 +1323,10 @@ export const useGeminiStream = (
               }
             } catch (error: unknown) {
               spanMetadata.error = error;
+              turnEndPayload = OmniHook.turnEndFromError(
+                getErrorMessage(error),
+                isNodeError(error) && error.name === 'AbortError',
+              );
               if (error instanceof UnauthorizedError) {
                 onAuthError('Session expired or is unauthorized.');
               } else if (
@@ -1350,7 +1353,13 @@ export const useGeminiStream = (
             } finally {
               if (activeQueryIdRef.current === queryId) {
                 setIsResponding(false);
-                OmniHook.onTurnFinished();
+                OmniHook.onTurnFinished(
+                  OmniHook.finalizeTurnEnd(
+                    turnEndPayload,
+                    turnCancelledRef.current,
+                    prompt_id!,
+                  ),
+                );
               }
             }
           });

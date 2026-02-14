@@ -11,11 +11,15 @@ import {
   type TrackedCancelledToolCall,
 } from '../ui/hooks/useToolScheduler.js';
 import { appEvents, AppEvent } from '../utils/events.js';
+import { type RemoteTurnEndPayload } from './events.js';
 import {
   type ThoughtSummary,
   type ToolCallRequestInfo,
   type GeminiClient,
+  type ServerGeminiFinishedEvent,
+  OmniLogger,
 } from '@google/gemini-cli-core';
+import { FinishReason } from '@google/genai';
 import type { HistoryItem } from '../ui/types.js';
 import { workspaceService } from './WorkspaceService.js';
 import type { LoadedSettings } from '../config/settings.js';
@@ -25,6 +29,92 @@ import { loadSettings } from '../config/settings.js';
  * Omni UI Hooks
  */
 export class OmniHook {
+  private static finishReasonCategory(
+    reason: FinishReason | undefined,
+  ): RemoteTurnEndPayload['category'] {
+    if (reason === undefined) return 'unknown';
+    if (reason === FinishReason.STOP) return 'intentional';
+    if (
+      reason === FinishReason.OTHER ||
+      reason === FinishReason.FINISH_REASON_UNSPECIFIED
+    ) {
+      return 'unknown';
+    }
+    return 'forced';
+  }
+
+  static turnEndFromFinished(
+    event: ServerGeminiFinishedEvent,
+  ): Partial<RemoteTurnEndPayload> {
+    return {
+      reason: 'finished',
+      category: this.finishReasonCategory(event.value.reason),
+      finishReason:
+        event.value.reason !== undefined
+          ? event.value.reason.toString()
+          : undefined,
+    };
+  }
+
+  static turnEndFromError(
+    message: string,
+    isAbort: boolean,
+  ): Partial<RemoteTurnEndPayload> {
+    return isAbort
+      ? {
+          reason: 'user_cancelled',
+          category: 'intentional',
+          message,
+        }
+      : {
+          reason: 'api_error',
+          category: 'error',
+          message,
+        };
+  }
+
+  static turnEndNoQuerySubmitted(
+    promptId: string,
+  ): Partial<RemoteTurnEndPayload> {
+    return {
+      reason: 'no_query_submitted',
+      category: 'unknown',
+      promptId,
+    };
+  }
+
+  static finalizeTurnEnd(
+    payload: Partial<RemoteTurnEndPayload> | undefined,
+    turnCancelled: boolean,
+    promptId: string,
+  ): Partial<RemoteTurnEndPayload> {
+    if (payload) {
+      return {
+        ...payload,
+        promptId: payload.promptId || promptId,
+      };
+    }
+    if (turnCancelled) {
+      return {
+        reason: 'force_end_model_output',
+        category: 'forced',
+        promptId,
+      };
+    }
+    return {
+      reason: 'unknown_turn_end',
+      category: 'unknown',
+      promptId,
+    };
+  }
+
+  static turnEndForcedToolOutput(): Partial<RemoteTurnEndPayload> {
+    return {
+      reason: 'force_end_tool_output',
+      category: 'forced',
+    };
+  }
+
   /**
    * Checks for FORCE-END-TURN signal in model content chunks.
    * Returns truncated text if signal is found, otherwise null.
@@ -49,8 +139,7 @@ export class OmniHook {
         type: MessageType.INFO,
         text: 'Turn ended by [FORCE-END-TURN] sequence in model output.',
       }, Date.now());
-      
-      this.onTurnFinished();
+
       return truncated;
     }
     return null;
@@ -79,11 +168,10 @@ export class OmniHook {
     if (hasSignal) {
       addItem({
         type: MessageType.INFO,
-        text: 'Turn ended by [FORCE-END-TURN ] sequence in tool output.',
+        text: 'Turn ended by [FORCE-END-TURN] sequence in tool output.',
       }, Date.now());
       
       setIsResponding(false);
-      this.onTurnFinished();
 
       const geminiTools = completedTools.filter(t => !t.request.isClientInitiated);
       if (geminiTools.length > 0 && geminiClient) {
@@ -122,8 +210,33 @@ export class OmniHook {
   /**
    * Hook called when a turn is finished.
    */
-  static onTurnFinished() {
-    appEvents.emit(AppEvent.RemoteResponse, '[TURN_FINISHED]');
+  static onTurnFinished(payload?: Partial<RemoteTurnEndPayload>) {
+    const workspacePath = payload?.workspacePath || workspaceService.getWorkspaceRoot();
+    const workspaceName = payload?.workspaceName || workspaceService.getWorkspaceName();
+    const event: RemoteTurnEndPayload = {
+      reason: payload?.reason || 'unknown_turn_end',
+      category: payload?.category || 'unknown',
+      finishReason: payload?.finishReason,
+      message: payload?.message,
+      source: payload?.source,
+      promptId: payload?.promptId,
+      timestamp: payload?.timestamp || new Date().toISOString(),
+      workspacePath,
+      workspaceName,
+    };
+
+    OmniLogger.logTurnEnd({
+      reason: event.reason,
+      category: event.category,
+      finishReason: event.finishReason,
+      message: event.message,
+      source: event.source,
+      promptId: event.promptId,
+      workspacePath: event.workspacePath,
+      workspaceName: event.workspaceName,
+    });
+
+    appEvents.emit(AppEvent.RemoteTurnEnd, event);
   }
 
   /**
@@ -160,6 +273,7 @@ export class OmniHook {
         : argv.workspace) || process.cwd();
     
     workspaceService.setWorkspaceRoot(effectiveWorkspaceRoot);
+    OmniLogger.setWorkspaceRoot(effectiveWorkspaceRoot);
 
     // If the workspace root is different from the initial CWD, reload settings
     // to ensure workspace-specific configurations are properly applied.

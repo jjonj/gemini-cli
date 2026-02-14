@@ -9,13 +9,18 @@ import {
   CommandKind,
   type SlashCommand,
 } from './types.js';
+import { handleModelCommandHook } from '../../omni/commands.js';
 
 export const modelCommand: SlashCommand = {
   name: 'model',
   description: 'Opens a dialog to configure the model',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
-  action: async (context: CommandContext) => {
+  action: async (context: CommandContext, args: string) => {
+    if (await handleModelCommandHook(context, args)) {
+      return;
+    }
+
     if (context.services.config) {
       await context.services.config.refreshUserQuota();
     }

@@ -68,3 +68,5 @@ evals/logs/
 
 # Lock files
 package-lock.json
+/Tasks.md
+/.lk

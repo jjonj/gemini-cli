@@ -5,7 +5,7 @@
  */
 
 import * as net from 'node:net';
-import { EventEmitter } from 'node:events';
+import type { EventEmitter } from 'node:events';
 import { appEvents, AppEvent } from '../utils/events.js';
 import { debugLogger } from '@google/gemini-cli-core';
 
@@ -57,8 +57,17 @@ export function startRemoteControl() {
               }
             } else if (msg.command === 'getHistory') {
               appEvents.emit(AppEvent.RequestRemoteHistory);
-            } else if (msg.command === 'dialogResponse' && msg.response) {
-              appEvents.emit(AppEvent.RemoteDialogResponse, msg.response);
+            } else if (
+              msg.command === 'dialogResponse' &&
+              typeof msg.response === 'string'
+            ) {
+              appEvents.emit(AppEvent.RemoteDialogResponse, {
+                response: msg.response,
+                dialogType:
+                  typeof msg.dialogType === 'string'
+                    ? msg.dialogType
+                    : undefined,
+              });
             }
           } catch (e) {
             debugLogger.error(`Failed to parse remote command: ${e}`);
@@ -117,11 +126,30 @@ export function startRemoteControl() {
       }
     };
 
+    const onTurnEnd = (data: {
+      reason: string;
+      category: string;
+      finishReason?: string;
+      message?: string;
+      source?: string;
+      promptId?: string;
+      timestamp?: string;
+      workspacePath?: string;
+      workspaceName?: string;
+    }) => {
+      try {
+        socket.write(JSON.stringify({ type: 'turn_end', ...data }) + '\n');
+      } catch (e) {
+        debugLogger.error(`Failed to write turn_end to remote control socket: ${e}`);
+      }
+    };
+
     appEvents.on(AppEvent.RemoteResponse, onResponse);
     appEvents.on(AppEvent.RemoteThought, onThought);
     appEvents.on(AppEvent.RemoteCodeDiff, onCodeDiff);
     appEvents.on(AppEvent.RemoteToolCall, onToolCall);
     appEvents.on(AppEvent.RemoteDialog, onDialog);
+    appEvents.on(AppEvent.RemoteTurnEnd, onTurnEnd);
 
     socket.on('close', () => {
       appEvents.off(AppEvent.RemoteResponse, onResponse);
@@ -129,6 +157,7 @@ export function startRemoteControl() {
       appEvents.off(AppEvent.RemoteCodeDiff, onCodeDiff);
       appEvents.off(AppEvent.RemoteToolCall, onToolCall);
       appEvents.off(AppEvent.RemoteDialog, onDialog);
+      appEvents.off(AppEvent.RemoteTurnEnd, onTurnEnd);
       debugLogger.log('Remote control client disconnected');
     });
 

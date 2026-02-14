@@ -5,6 +5,10 @@
  */
 
 import { EventEmitter } from 'node:events';
+import type {
+  RemoteTurnEndPayload,
+  RemoteDialogResponsePayload,
+} from '../omni/events.js';
 
 export enum AppEvent {
   OpenDebugConsole = 'open-debug-console',
@@ -19,6 +23,7 @@ export enum AppEvent {
   RemoteToolCall = 'remote-tool-call',
   RemoteDialog = 'remote-dialog',
   RemoteDialogResponse = 'remote-dialog-response',
+  RemoteTurnEnd = 'remote-turn-end',
   RequestRemoteHistory = 'request-remote-history',
 }
 
@@ -34,7 +39,8 @@ export interface AppEvents {
   [AppEvent.RemoteCodeDiff]: [string];
   [AppEvent.RemoteToolCall]: [string];
   [AppEvent.RemoteDialog]: [{ type: string; prompt: string; options?: string[] }];
-  [AppEvent.RemoteDialogResponse]: [string];
+  [AppEvent.RemoteDialogResponse]: [RemoteDialogResponsePayload];
+  [AppEvent.RemoteTurnEnd]: [RemoteTurnEndPayload];
   [AppEvent.RequestRemoteHistory]: never[];
 }
 

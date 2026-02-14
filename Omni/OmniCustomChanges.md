@@ -24,7 +24,7 @@ This document tracks the persistent local modifications and structural additions
     - **Tool Call Rendering Fix:** Prepend `Tool Call: ` to `AppEvent.RemoteToolCall` messages in `turnTermination.ts` for proper Android app rendering.
 
 ## Re-implemented Features (Bootstrapped)
-- **Omni Logger:** High-fidelity API error logging and conversation snapshots to `Omni/api_errors.log`.  
+- **Omni Logger:** High-fidelity API error logging. Logs are centralized in `D:\SSDProjects\Tools\omni-gemini-cli\Omni\<workspace_name>\api_errors.log`.  
 - **Safety Overrides:** Automatic folder trust to eliminate redundant permission prompts.
     - **Core Override:** `Config.prototype.isTrustedFolder` patched in `core`.
     - **CLI Override:** `LoadedTrustedFolders.prototype.isPathTrusted` patched in `cli` to bypass UI dialogs.
@@ -34,6 +34,14 @@ This document tracks the persistent local modifications and structural additions
 - **Open Directory Command:** `/od` command to open the current workspace in the OS file explorer.
     - **Implementation:** `openDirectoryCommand.ts` uses the `open` library.
     - **Registration:** Injected into `BuiltinCommandLoader.ts`.
+- **Auto Handlers:** Automated dialog interaction via IPC.
+    - **Implementation:** `OmniDialogManager.tsx` monitors `UIState` and bridges dialogs (Confirmation, AuthConsent, LoopDetection, ProQuota, Validation) to the remote control layer.
+    - **UI Integration:** Uses `UIActions` for state-managed dialogs (Quota/Validation) and direct callbacks for others.
+    - **Tool Confirmations:** Scans history and pending items to support remote approval of tool executions (exec, edit, mcp).
+- **Ask User Runtime Patches (Bootstrapped):**
+    - **YOLO Exception:** `PolicyEngine.prototype.check` is patched in `packages/core/src/omni/bootstrap.ts` so `ask_user` remains interactive (not auto-allowed) even in YOLO mode.
+    - **Payload Preservation:** `CoreToolScheduler.prototype.handleConfirmationResponse` is patched to preserve confirmation payloads (for example `answers`) when invoking legacy `onConfirm` callbacks.
+    - **Speech Notification:** `AskUserInvocation.prototype.shouldConfirmExecute` is patched to invoke `aispeak.py "<question>"` for the first ask-user question.
 
 ## Preserved Local Modifications
 The following files retain local changes and are protected from automatic reversion:  

@@ -6,7 +6,15 @@
 
 import { Config } from '../config/config.js';
 import { GeminiChat, StreamEventType } from '../core/geminiChat.js';
+import { CoreToolScheduler } from '../core/coreToolScheduler.js';
+import { ApprovalMode, PolicyDecision } from '../policy/types.js';
+import { PolicyEngine } from '../policy/policy-engine.js';
+import { AskUserInvocation } from '../tools/ask-user.js';
+import { ASK_USER_TOOL_NAME } from '../tools/tool-names.js';
+import { ToolConfirmationOutcome } from '../tools/tools.js';
+import type { ToolConfirmationPayload } from '../tools/tools.js';
 import { OmniLogger } from './omniLogger.js';
+import { exec } from 'node:child_process';
 
 /**
  * Omni Runtime Bootstrap
@@ -15,8 +23,14 @@ import { OmniLogger } from './omniLogger.js';
  * Gemini CLI classes without modifying their source files. This minimizes 
  * merge conflicts during upstream rebases.
  */
+let omniCoreBootstrapped = false;
 
 export function bootstrapOmni() {
+  if (omniCoreBootstrapped) {
+    return;
+  }
+  omniCoreBootstrapped = true;
+
   // --- 1. Safety Overrides (Always Trust Folders) ---
   // Overriding this on the prototype ensures that all checks 
   // (core and CLI) see the folder as trusted.
@@ -28,9 +42,16 @@ export function bootstrapOmni() {
   const originalSendMessageStream = GeminiChat.prototype.sendMessageStream;
 
   GeminiChat.prototype.sendMessageStream = async function(...args) {
-    const stream = await originalSendMessageStream.apply(this, args);
+    let stream;
+    try {
+      stream = await originalSendMessageStream.apply(this, args);
+    } catch (error) {
+      OmniLogger.logApiError(error, {
+        source: 'core.bootstrap.sendMessageStream.initial',
+      });
+      throw error;
+    }
     const FORCE_END_TURN_STRING = '[FORCE-END-TURN]';
-    const self = this;
 
     const wrappedGenerator = async function* () {
       try {
@@ -47,7 +68,11 @@ export function bootstrapOmni() {
           yield event;
         }
       } catch (error) {
-        OmniLogger.logApiError(error, (self as any).history);
+        if (!OmniLogger.isAbortLikeError(error)) {
+          OmniLogger.logApiError(error, {
+            source: 'core.bootstrap.sendMessageStream',
+          });
+        }
         throw error;
       }
     };
@@ -102,5 +127,84 @@ export function bootstrapOmni() {
 
   GeminiChat.prototype.rollbackTurn = function() {
     this.rollbackDeep();
+  };
+
+  // --- 5. Omni Policy Patch: Keep ask_user Interactive in YOLO ---
+  const originalPolicyCheck = PolicyEngine.prototype.check;
+  PolicyEngine.prototype.check = async function(...args) {
+    const [toolCall] = args as Parameters<PolicyEngine['check']>;
+    if (
+      this.getApprovalMode() === ApprovalMode.YOLO &&
+      toolCall?.name === ASK_USER_TOOL_NAME
+    ) {
+      return { decision: PolicyDecision.ASK_USER };
+    }
+    return originalPolicyCheck.apply(this, args);
+  };
+
+  // --- 6. Omni Scheduler Patch: Preserve Confirmation Payload ---
+  const originalHandleConfirmationResponse =
+    CoreToolScheduler.prototype.handleConfirmationResponse;
+  CoreToolScheduler.prototype.handleConfirmationResponse = function(
+    callId: string,
+    originalOnConfirm: (outcome: ToolConfirmationOutcome) => Promise<void>,
+    outcome: ToolConfirmationOutcome,
+    signal: AbortSignal,
+    payload?: ToolConfirmationPayload,
+  ) {
+    const wrappedOnConfirm = async (innerOutcome: ToolConfirmationOutcome) => {
+      await (
+        originalOnConfirm as unknown as (
+          outcome: ToolConfirmationOutcome,
+          payload?: ToolConfirmationPayload,
+        ) => Promise<void>
+      )(innerOutcome, payload);
+    };
+
+    return originalHandleConfirmationResponse.call(
+      this,
+      callId,
+      wrappedOnConfirm,
+      outcome,
+      signal,
+      payload,
+    );
+  };
+
+  // --- 7. Omni AskUser Speech Notification ---
+  const originalAskUserShouldConfirmExecute =
+    AskUserInvocation.prototype.shouldConfirmExecute;
+  AskUserInvocation.prototype.shouldConfirmExecute = async function(
+    abortSignal: AbortSignal,
+  ) {
+    const details = await originalAskUserShouldConfirmExecute.call(
+      this,
+      abortSignal,
+    );
+
+    if (details && details.type === 'ask_user') {
+      const firstQuestion =
+        (this as { params?: { questions?: Array<{ question?: string }> } })
+          .params?.questions?.[0]?.question ?? 'New question';
+      const speakText = firstQuestion.replace(/[\r\n]+/g, ' ').trim();
+
+      if (speakText.length > 0) {
+        const escapedSpeakText = speakText.replace(/"/g, "'");
+        const command =
+          process.platform === 'win32'
+            ? `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "aispeak.py \\"${escapedSpeakText}\\""`
+            : `aispeak.py "${escapedSpeakText}"`;
+
+        exec(command, (error) => {
+          if (error && !OmniLogger.isAbortLikeError(error)) {
+            OmniLogger.logApiError(error, {
+              source: 'core.bootstrap.ask_user_speech',
+            });
+          }
+        });
+      }
+    }
+
+    return details;
   };
 }

@@ -81,6 +81,7 @@ import { bufferTelemetryEvent } from './sdk.js';
 import type { UiEvent } from './uiTelemetry.js';
 import { uiTelemetryService } from './uiTelemetry.js';
 import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
+import { OmniLogger } from '../omni/omniLogger.js';
 
 export function logCliConfiguration(
   config: Config,
@@ -242,6 +243,9 @@ export function logRipgrepFallback(
 }
 
 export function logApiError(config: Config, event: ApiErrorEvent): void {
+  OmniLogger.logApiError(event, {
+    source: 'telemetry.logApiError',
+  });
   const uiEvent = {
     ...event,
     'event.name': EVENT_API_ERROR,
