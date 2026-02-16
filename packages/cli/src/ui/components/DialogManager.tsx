@@ -39,7 +39,6 @@ import { IdeTrustChangeDialog } from './IdeTrustChangeDialog.js';
 import { NewAgentsNotification } from './NewAgentsNotification.js';
 import { AgentConfigDialog } from './AgentConfigDialog.js';
 import { PolicyUpdateDialog } from './PolicyUpdateDialog.js';
-import { LoginRestartDialog } from '../auth/LoginRestartDialog.js';
 
 interface DialogManagerProps {
   addItem: UseHistoryManagerReturn['addItem'];
@@ -307,17 +306,6 @@ export const DialogManager = ({
     );
   }
 
-  if (uiState.isAwaitingLoginRestart) {
-    return (
-      <Box flexDirection="column">
-        <LoginRestartDialog
-          onDismiss={uiActions.dismissLoginRestart}
-          config={config}
-          message={uiState.loginRestartMessage}
-        />
-      </Box>
-    );
-  }
   if (uiState.isAuthDialogOpen) {
     return (
       <Box flexDirection="column">
@@ -327,7 +315,6 @@ export const DialogManager = ({
           setAuthState={uiActions.setAuthState}
           authError={uiState.authError}
           onAuthError={uiActions.onAuthError}
-          setAuthContext={uiActions.setAuthContext}
         />
       </Box>
     );

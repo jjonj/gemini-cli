@@ -83,11 +83,9 @@ export interface UIActions {
   revealCleanUiDetailsTemporarily: (durationMs?: number) => void;
   handleWarning: (message: string) => void;
   setEmbeddedShellFocused: (value: boolean) => void;
-  dismissBackgroundTask: (pid: number) => Promise<void>;
+  dismissBackgroundTask: (pid: number) => void;
   setActiveBackgroundTaskPid: (pid: number) => void;
   setIsBackgroundTaskListOpen: (isOpen: boolean) => void;
-  setAuthContext: (context: { requiresRestart?: boolean }) => void;
-  dismissLoginRestart: () => void;
   onHintInput: (char: string) => void;
   onHintBackspace: () => void;
   onHintClear: () => void;

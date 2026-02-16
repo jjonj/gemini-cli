@@ -20,8 +20,8 @@ import {
   type ValidationIntent,
   type Question,
   ToolConfirmationOutcome,
-  CoreToolCallStatus,
   AuthType,
+  CoreToolCallStatus,
 } from '@google/gemini-cli-core';
 import { type HistoryItem, type HistoryItemToolGroup } from '../ui/types.js';
 import { OmniHook } from './turnTermination.js';

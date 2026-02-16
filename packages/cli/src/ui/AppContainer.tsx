@@ -73,7 +73,6 @@ import {
   refreshServerHierarchicalMemory,
   flattenMemory,
   type MemoryChangedPayload,
-  writeToStdout,
   disableMouseEvents,
   enterAlternateScreen,
   enableMouseEvents,
@@ -751,16 +750,6 @@ export const AppContainer = (props: AppContainerProps) => {
     initializationResult.authError,
     initializationResult.accountSuspensionInfo,
   );
-  const [authContext, setAuthContext] = useState<{ requiresRestart?: boolean }>(
-    {},
-  );
-
-  useEffect(() => {
-    if (authState === AuthState.Authenticated && authContext.requiresRestart) {
-      setAuthState(AuthState.AwaitingLoginRestart);
-      setAuthContext({});
-    }
-  }, [authState, authContext, setAuthState]);
 
   const {
     proQuotaRequest,
@@ -823,11 +812,6 @@ export const AppContainer = (props: AppContainerProps) => {
       if (authType) {
         const previousAuthType =
           config.getContentGeneratorConfig()?.authType ?? 'unknown';
-        if (authType === AuthType.LOGIN_WITH_GOOGLE) {
-          setAuthContext({ requiresRestart: true });
-        } else {
-          setAuthContext({});
-        }
         await clearCachedCredentialFile();
         settings.setValue(scope, 'security.auth.selectedType', authType);
 
@@ -859,17 +843,12 @@ export const AppContainer = (props: AppContainerProps) => {
           authType === AuthType.LOGIN_WITH_GOOGLE &&
           config.isBrowserLaunchSuppressed()
         ) {
-          writeToStdout(`
-----------------------------------------------------------------
-Logging in with Google... Restarting Gemini CLI to continue.
-----------------------------------------------------------------
-          `);
           await relaunchApp();
         }
       }
       setAuthState(AuthState.Authenticated);
     },
-    [settings, config, setAuthState, onAuthError, setAuthContext],
+    [settings, config, setAuthState, onAuthError],
   );
 
   const handleApiKeySubmit = useCallback(
@@ -2746,11 +2725,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       dismissBackgroundTask,
       setActiveBackgroundTaskPid,
       setIsBackgroundTaskListOpen,
-      setAuthContext,
-      dismissLoginRestart: () => {
-        setAuthContext({});
-        setAuthState(AuthState.Updating);
-      },
       onHintInput: () => {},
       onHintBackspace: () => {},
       onHintClear: () => {},
@@ -2847,7 +2821,6 @@ Logging in with Google... Restarting Gemini CLI to continue.
       dismissBackgroundTask,
       setActiveBackgroundTaskPid,
       setIsBackgroundTaskListOpen,
-      setAuthContext,
       setAccountSuspensionInfo,
       newAgents,
       config,
