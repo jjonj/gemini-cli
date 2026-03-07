@@ -15,7 +15,14 @@ import { openDirectoryCommand } from './openDirectoryCommand.js';
  * 
  * This file extends the core bootstrap logic with CLI-specific overrides.
  */
+let omniCliBootstrapped = false;
+
 export function bootstrapOmni() {
+  if (omniCliBootstrapped) {
+    return;
+  }
+  omniCliBootstrapped = true;
+
   bootstrapCore();
 
   // --- 4. CLI Safety Overrides (Always Trust Folders) ---

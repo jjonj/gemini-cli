@@ -18,6 +18,8 @@ import {
   decodeTagName,
   type MessageActionReturn,
   INITIAL_HISTORY_LENGTH,
+  convertToRestPayload,
+  workspaceService,
 } from '@google/gemini-cli-core';
 import path from 'node:path';
 import type {
@@ -27,8 +29,6 @@ import type {
 } from '../types.js';
 import { MessageType } from '../types.js';
 import { exportHistoryToFile } from '../utils/historyExportUtils.js';
-import { convertToRestPayload } from '@google/gemini-cli-core';
-import { workspaceService } from '../../omni/WorkspaceService.js';
 
 const CHECKPOINT_MENU_GROUP = 'checkpoints';
 

@@ -6,3 +6,4 @@
 
 export * from './bootstrap.js';
 export * from './omniLogger.js';
+export * from './WorkspaceService.js';

@@ -4,12 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { debugLogger, isGitRepository } from '@google/gemini-cli-core';
+import {
+  debugLogger,
+  isGitRepository,
+  workspaceService,
+} from '@google/gemini-cli-core';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as childProcess from 'node:child_process';
 import process from 'node:process';
-import { workspaceService } from '../omni/WorkspaceService.js';
 
 export const isDevelopment = process.env['NODE_ENV'] === 'development';
 

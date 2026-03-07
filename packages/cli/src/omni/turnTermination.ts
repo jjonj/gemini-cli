@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MessageType, CoreToolCallStatus } from '../ui/types.js';
+import { MessageType } from '../ui/types.js';
 import { FORCE_END_TURN_STRING } from '../ui/constants.js';
 import {
   type TrackedCompletedToolCall,
@@ -15,11 +15,14 @@ import {
   type ThoughtSummary,
   type ToolCallRequestInfo,
   type GeminiClient,
+  OmniLogger,
+  CoreToolCallStatus,
+  workspaceService,
 } from '@google/gemini-cli-core';
 import type { HistoryItem } from '../ui/types.js';
-import { workspaceService } from './WorkspaceService.js';
 import type { LoadedSettings } from '../config/settings.js';
 import { loadSettings } from '../config/settings.js';
+import type { RemoteTurnEndPayload } from './events.js';
 
 /**
  * Omni UI Hooks
@@ -122,8 +125,35 @@ export class OmniHook {
   /**
    * Hook called when a turn is finished.
    */
-  static onTurnFinished() {
+  static onTurnFinished(payload?: Partial<RemoteTurnEndPayload>) {
+    const workspacePath = payload?.workspacePath || workspaceService.getWorkspaceRoot();
+    const workspaceName = payload?.workspaceName || workspaceService.getWorkspaceName();
+    const event: RemoteTurnEndPayload = {
+      reason: payload?.reason || 'unknown_turn_end',
+      category: payload?.category || 'unknown',
+      finishReason: payload?.finishReason,
+      message: payload?.message,
+      source: payload?.source,
+      promptId: payload?.promptId,
+      timestamp: payload?.timestamp || new Date().toISOString(),
+      workspacePath,
+      workspaceName,
+    };
+
+    OmniLogger.logTurnEnd({
+      reason: event.reason,
+      category: event.category,
+      finishReason: event.finishReason,
+      message: event.message,
+      source: event.source,
+      promptId: event.promptId,
+      workspacePath: event.workspacePath,
+      workspaceName: event.workspaceName,
+    });
+
+    appEvents.emit(AppEvent.RemoteTurnEnd, event);
     appEvents.emit(AppEvent.RemoteResponse, '[TURN_FINISHED]');
+    appEvents.emit(AppEvent.RemoteStatus, 'FINISHED');
   }
 
   /**

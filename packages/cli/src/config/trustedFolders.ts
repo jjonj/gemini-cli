@@ -5,6 +5,7 @@
  */
 
 import {
+  workspaceService,
   type HeadlessModeOptions,
   checkPathTrust,
   isHeadlessMode,
@@ -12,7 +13,6 @@ import {
   LoadedTrustedFolders,
 } from '@google/gemini-cli-core';
 import type { Settings } from './settings.js';
-import { workspaceService } from '../omni/WorkspaceService.js';
 
 export {
   TrustLevel,

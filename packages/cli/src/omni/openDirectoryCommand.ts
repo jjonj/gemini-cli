@@ -6,7 +6,7 @@
 
 import open from 'open';
 import { type SlashCommand, CommandKind } from '../ui/commands/types.js';
-import { workspaceService } from './WorkspaceService.js';
+import { workspaceService } from '@google/gemini-cli-core';
 
 /**
  * Opens the current workspace directory in the OS file explorer.

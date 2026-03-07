@@ -49,6 +49,7 @@ import {
   type HookEventName,
   type OutputFormat,
   detectIdeFromEnv,
+  workspaceService,
 } from '@google/gemini-cli-core';
 import {
   type Settings,
@@ -63,7 +64,6 @@ import { loadSandboxConfig } from './sandboxConfig.js';
 import { resolvePath } from '../utils/resolvePath.js';
 import { isRecord } from '../utils/settingsUtils.js';
 import { RESUME_LATEST } from '../utils/sessionUtils.js';
-import { workspaceService } from '../omni/WorkspaceService.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
 import {

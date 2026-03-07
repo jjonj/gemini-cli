@@ -19,6 +19,7 @@ import {
   coreEvents,
   homedir,
   AuthType,
+  workspaceService,
   type AdminControlsSettings,
   createCache,
 } from '@google/gemini-cli-core';
@@ -26,7 +27,6 @@ import stripJsonComments from 'strip-json-comments';
 import { DefaultLight } from '../ui/themes/builtin/light/default-light.js';
 import { DefaultDark } from '../ui/themes/builtin/dark/default-dark.js';
 import { isWorkspaceTrusted } from './trustedFolders.js';
-import { workspaceService } from '../omni/WorkspaceService.js';
 import {
   type Settings,
   type MergedSettings,

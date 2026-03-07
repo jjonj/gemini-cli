@@ -5,6 +5,11 @@
  */
 
 import { EventEmitter } from 'node:events';
+import { type Question } from '@google/gemini-cli-core';
+import type {
+  RemoteTurnEndPayload,
+  RemoteDialogResponsePayload,
+} from '../omni/events.js';
 
 export enum TransientMessageType {
   Warning = 'warning',
@@ -32,6 +37,10 @@ export enum AppEvent {
   RemoteDialog = 'remote-dialog',
   RemoteDialogResponse = 'remote-dialog-response',
   RequestRemoteHistory = 'request-remote-history',
+  RemoteTurnEnd = 'remote-turn-end',
+  RemoteHistory = 'remote-history',
+  RemoteStatus = 'remote-status',
+  RequestReadiness = 'request-readiness',
 }
 
 export interface AppEvents {
@@ -47,9 +56,15 @@ export interface AppEvents {
   [AppEvent.RemoteThought]: [string];
   [AppEvent.RemoteCodeDiff]: [string];
   [AppEvent.RemoteToolCall]: [string];
-  [AppEvent.RemoteDialog]: [{ type: string; prompt: string; options?: string[] }];
-  [AppEvent.RemoteDialogResponse]: [string];
+  [AppEvent.RemoteDialog]: [
+    { type: string; prompt: string; options?: string[]; questions?: Question[] },
+  ];
+  [AppEvent.RemoteDialogResponse]: [RemoteDialogResponsePayload];
+  [AppEvent.RemoteTurnEnd]: [RemoteTurnEndPayload];
   [AppEvent.RequestRemoteHistory]: never[];
+  [AppEvent.RemoteHistory]: [string];
+  [AppEvent.RemoteStatus]: [string];
+  [AppEvent.RequestReadiness]: never[];
 }
 
 export const appEvents = new EventEmitter<AppEvents>();

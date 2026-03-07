@@ -17,8 +17,8 @@ import {
   startupProfiler,
   getAdminErrorMessage,
   AuthType,
+  workspaceService,
 } from '@google/gemini-cli-core';
-import { workspaceService } from '../omni/WorkspaceService.js';
 import { aboutCommand } from '../ui/commands/aboutCommand.js';
 import { agentsCommand } from '../ui/commands/agentsCommand.js';
 import { authCommand } from '../ui/commands/authCommand.js';

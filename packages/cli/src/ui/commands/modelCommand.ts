@@ -5,14 +5,11 @@
  */
 
 import {
-  ModelSlashCommandEvent,
-  logModelSlashCommand,
-} from '@google/gemini-cli-core';
-import {
   type CommandContext,
   CommandKind,
   type SlashCommand,
 } from './types.js';
+import { handleModelCommandHook } from '../../omni/commands.js';
 import { MessageType } from '../types.js';
 
 const setModelCommand: SlashCommand = {
@@ -22,6 +19,10 @@ const setModelCommand: SlashCommand = {
   kind: CommandKind.BUILT_IN,
   autoExecute: false,
   action: async (context: CommandContext, args: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const { ModelSlashCommandEvent, logModelSlashCommand } =
+      await import('@google/gemini-cli-core');
+
     const parts = args.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) {
       context.ui.addItem({
@@ -35,9 +36,10 @@ const setModelCommand: SlashCommand = {
     const persist = parts.includes('--persist');
 
     if (context.services.agentContext?.config) {
-      context.services.agentContext.config.setModel(modelName, !persist);
+      const config = context.services.agentContext.config;
+      config.setModel(modelName, !persist);
       const event = new ModelSlashCommandEvent(modelName);
-      logModelSlashCommand(context.services.agentContext.config, event);
+      logModelSlashCommand(config, event);
 
       context.ui.addItem({
         type: MessageType.INFO,
@@ -65,10 +67,14 @@ const manageModelCommand: SlashCommand = {
 
 export const modelCommand: SlashCommand = {
   name: 'model',
-  description: 'Manage model configuration',
+  description: 'Configuration for the model',
   kind: CommandKind.BUILT_IN,
-  autoExecute: false,
-  subCommands: [manageModelCommand, setModelCommand],
-  action: async (context: CommandContext, args: string) =>
-    manageModelCommand.action!(context, args),
+  subCommands: [setModelCommand, manageModelCommand],
+  action: async (context: CommandContext, args: string) => {
+    if (await handleModelCommandHook(context, args)) {
+      return;
+    }
+
+    return manageModelCommand.action!(context, args);
+  },
 };

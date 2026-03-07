@@ -92,6 +92,7 @@ import { bufferTelemetryEvent } from './sdk.js';
 import { uiTelemetryService, type UiEvent } from './uiTelemetry.js';
 import { ClearcutLogger } from './clearcut-logger/clearcut-logger.js';
 import { debugLogger } from '../utils/debugLogger.js';
+import { OmniLogger } from '../omni/omniLogger.js';
 import type { BillingTelemetryEvent } from './billingEvents.js';
 import {
   CreditsUsedEvent,
@@ -271,7 +272,8 @@ export function logRipgrepFallback(
   });
 }
 
-export function logApiError(config: Config, event: ApiErrorEvent): void {
+export function logApiError(config: Config, event: ApiErrorEvent, options?: { source?: string }): void {
+  OmniLogger.logApiError(event, options);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
   const uiEvent = {
     // eslint-disable-next-line @typescript-eslint/no-misused-spread

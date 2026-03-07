@@ -5,9 +5,9 @@
  */
 
 import * as net from 'node:net';
-import { EventEmitter } from 'node:events';
+import type { EventEmitter } from 'node:events';
 import { appEvents, AppEvent } from '../utils/events.js';
-import { debugLogger } from '@google/gemini-cli-core';
+import { debugLogger, type Question } from '@google/gemini-cli-core';
 
 /**
  * Starts the PID-specific Named Pipe server for remote control.
@@ -35,7 +35,7 @@ export function startRemoteControl() {
                 appEvents.emit(AppEvent.RemotePrompt, msg.text);
               } else {
                 debugLogger.log(
-                  '[RemoteControl] Buffering prompt: waiting for listener...', 
+                  '[RemoteControl] Buffering prompt: waiting for listener...',
                 );
                 const bufferHandler = (event: string | symbol) => {
                   if (event === AppEvent.RemotePrompt) {
@@ -50,18 +50,17 @@ export function startRemoteControl() {
                     );
                   }
                 };
-                (appEvents as EventEmitter).on(
-                  'newListener',
-                  bufferHandler,
-                );
+                (appEvents as any).on('newListener', bufferHandler);
               }
-            } else if (msg.command === 'getHistory') {
+            } else if (msg.command === 'response' && msg.text) {
+              appEvents.emit(AppEvent.RemoteDialogResponse, msg.text);
+            } else if (msg.command === 'history') {
               appEvents.emit(AppEvent.RequestRemoteHistory);
-            } else if (msg.command === 'dialogResponse' && msg.response) {
-              appEvents.emit(AppEvent.RemoteDialogResponse, msg.response);
+            } else if (msg.command === 'readiness') {
+              appEvents.emit(AppEvent.RequestReadiness);
             }
           } catch (e) {
-            debugLogger.error(`Failed to parse remote command: ${e}`);
+            debugLogger.error(`Failed to parse remote control message: ${e}`);
           }
         }
       }
@@ -71,49 +70,73 @@ export function startRemoteControl() {
       try {
         socket.write(JSON.stringify({ type: 'response', text }) + '\n');
       } catch (e) {
-        debugLogger.error(`Failed to write to remote control socket: ${e}`);
+        debugLogger.error(`Failed to write response to remote control socket: ${e}`);
       }
     };
 
-    const onThought = (text: string) => {
+    const onThought = (thought: string) => {
       try {
-        socket.write(JSON.stringify({ type: 'thought', text }) + '\n');
+        socket.write(JSON.stringify({ type: 'thought', thought }) + '\n');
       } catch (e) {
         debugLogger.error(`Failed to write thought to remote control socket: ${e}`);
       }
     };
 
-    const onCodeDiff = (text: string) => {
+    const onCodeDiff = (diff: string) => {
       try {
-        socket.write(JSON.stringify({ type: 'codeDiff', text }) + '\n');
+        socket.write(JSON.stringify({ type: 'code_diff', diff }) + '\n');
       } catch (e) {
-        debugLogger.error(`Failed to write codeDiff to remote control socket: ${e}`);
+        debugLogger.error(`Failed to write code_diff to remote control socket: ${e}`);
       }
     };
 
-    const onToolCall = (text: string) => {
+    const onToolCall = (toolCall: string) => {
       try {
-        socket.write(JSON.stringify({ type: 'toolCall', text }) + '\n');
+        socket.write(JSON.stringify({ type: 'tool_call', toolCall }) + '\n');
       } catch (e) {
-        debugLogger.error(`Failed to write toolCall to remote control socket: ${e}`);
+        debugLogger.error(`Failed to write tool_call to remote control socket: ${e}`);
       }
     };
 
-    const onDialog = (data: {
-      type: string;
-      prompt: string;
-      options?: string[];
-    }) => {
+    const onDialog = (data: { type: string; prompt: string; options?: string[]; questions?: Question[] }) => {
       try {
-        const payload = {
-          type: 'dialog',
-          dialogType: data.type,
-          prompt: data.prompt,
-          options: data.options,
-        };
-        socket.write(JSON.stringify(payload) + '\n');
+        socket.write(JSON.stringify(data) + '\n');
       } catch (e) {
         debugLogger.error(`Failed to write dialog to remote control socket: ${e}`);
+      }
+    };
+
+    const onTurnEnd = (data: {
+      reason: string;
+      category: string;
+      finishReason?: string;
+      message?: string;
+      source?: string;
+      promptId?: string;
+      timestamp?: string;
+      workspacePath?: string;
+      workspaceName?: string;
+    }) => {
+      try {
+        socket.write(JSON.stringify({ type: 'turn_end', ...data }) + '\n');
+      } catch (e) {
+        debugLogger.error(`Failed to write turn_end to remote control socket: ${e}`);
+      }
+    };
+
+    const onStatus = (status: string) => {
+      try {
+        socket.write(JSON.stringify({ type: 'status', status }) + '\n');
+      } catch (e) {
+        debugLogger.error(`Failed to write status to remote control socket: ${e}`);
+      }
+    };
+
+    const onHistory = (text: string) => {
+      try {
+        socket.write(JSON.stringify({ type: 'history', text }) + '\n');
+      } catch (e) {
+        debugLogger.error(`Failed to write history to remote control socket: ${e}`);
       }
     };
 
@@ -122,6 +145,9 @@ export function startRemoteControl() {
     appEvents.on(AppEvent.RemoteCodeDiff, onCodeDiff);
     appEvents.on(AppEvent.RemoteToolCall, onToolCall);
     appEvents.on(AppEvent.RemoteDialog, onDialog);
+    appEvents.on(AppEvent.RemoteTurnEnd, onTurnEnd);
+    appEvents.on(AppEvent.RemoteStatus, onStatus);
+    appEvents.on(AppEvent.RemoteHistory, onHistory);
 
     socket.on('close', () => {
       appEvents.off(AppEvent.RemoteResponse, onResponse);
@@ -129,6 +155,9 @@ export function startRemoteControl() {
       appEvents.off(AppEvent.RemoteCodeDiff, onCodeDiff);
       appEvents.off(AppEvent.RemoteToolCall, onToolCall);
       appEvents.off(AppEvent.RemoteDialog, onDialog);
+      appEvents.off(AppEvent.RemoteTurnEnd, onTurnEnd);
+      appEvents.off(AppEvent.RemoteStatus, onStatus);
+      appEvents.off(AppEvent.RemoteHistory, onHistory);
       debugLogger.log('Remote control client disconnected');
     });
 

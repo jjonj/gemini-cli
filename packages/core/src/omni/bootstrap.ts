@@ -6,22 +6,33 @@
 
 import { Config } from '../config/config.js';
 import { GeminiChat, StreamEventType } from '../core/geminiChat.js';
+import { workspaceService } from './WorkspaceService.js';
+import { Scheduler } from '../scheduler/scheduler.js';
 import { OmniLogger } from './omniLogger.js';
+import { coreEvents } from '../utils/events.js';
+import {
+  type ValidatingToolCall,
+} from '../scheduler/types.js';
 
 /**
- * Omni Runtime Bootstrap
- * 
- * This file uses prototype monkey-patching to inject custom logic into the core 
- * Gemini CLI classes without modifying their source files. This minimizes 
- * merge conflicts during upstream rebases.
+ * Bootstraps Omni-specific enhancements by monkey-patching core classes.
+ * This is non-invasive to the core codebase.
  */
-
 export function bootstrapOmni() {
   // --- 1. Safety Overrides (Always Trust Folders) ---
-  // Overriding this on the prototype ensures that all checks 
+  // Overriding this on the prototype ensures that all checks
   // (core and CLI) see the folder as trusted.
   Config.prototype.isTrustedFolder = function() {
     return true;
+  };
+
+  // 1.5 Path Interception for Workspace Service
+  const originalGetTargetDir = Config.prototype.getTargetDir;
+  Config.prototype.getTargetDir = function() {
+    const original = originalGetTargetDir.call(this);
+    workspaceService.setWorkspaceRoot(original);
+    OmniLogger.setWorkspaceRoot(original);
+    return original;
   };
 
   // --- 2. API Logger & Aggressive Turn Termination ---
@@ -39,9 +50,9 @@ export function bootstrapOmni() {
           if (event.type === StreamEventType.CHUNK) {
             const content = event.value.candidates?.[0]?.content;
             const text = content?.parts?.[0]?.text;
-            
+
             if (text && text.toUpperCase().includes(FORCE_END_TURN_STRING)) {
-              return; 
+              return;
             }
           }
           yield event;
@@ -60,7 +71,7 @@ export function bootstrapOmni() {
 
   GeminiChat.prototype.recordCompletedToolCalls = function(model, toolCalls) {
     const FORCE_END_TURN_STRING = '[FORCE-END-TURN]';
-    
+
     const hasForceEndSignal = toolCalls.some((call) => {
       const resultDisplay = call.response?.resultDisplay;
       if (typeof resultDisplay === 'string') {
@@ -77,6 +88,37 @@ export function bootstrapOmni() {
     }
 
     return originalRecordCompletedToolCalls.apply(this, [model, toolCalls]);
+  };
+
+  // 3.5 Tool Call Interception for high-fidelity logging and IPC
+  // We patch the internal _processToolCall method which is common to all tool executions
+  // in the new Scheduler architecture.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  const originalProcessToolCall = (Scheduler.prototype as any)._processToolCall;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+  (Scheduler.prototype as any)._processToolCall = async function(
+    toolCall: ValidatingToolCall,
+    signal: AbortSignal,
+  ) {
+    const request = toolCall.request;
+    const invocation = toolCall.invocation;
+
+    // Log the tool call for Omni session tracking
+    const logPayload = {
+      callId: request.callId,
+      name: request.name,
+      args: request.args,
+      invocation: invocation,
+    };
+    
+    // Emit via coreEvents. Since core shouldn't depend on CLI types, we use 
+    // a prefixed console log that the CLI's remoteControl can intercept if needed,
+    // or just rely on the high-fidelity log emission if we add a dedicated event.
+    // For now, we'll use a custom internal event if we can, but ConsoleLog is safe.
+    coreEvents.emitConsoleLog('debug', `OMNI_TOOL_CALL:${JSON.stringify(logPayload)}`);
+
+    // Call the original implementation
+    return originalProcessToolCall.call(this, toolCall, signal);
   };
 
   // --- 4. Surgical Rollback (Undo) ---
