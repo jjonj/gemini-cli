@@ -181,6 +181,13 @@ export class OmniHook {
   }
 
   /**
+   * Helper to emit a remote history directly.
+   */
+  static emitRemoteHistory(text: string) {
+    appEvents.emit(AppEvent.RemoteHistory, text);
+  }
+
+  /**
    * Initializes the workspace root from CLI arguments.
    */
   static initializeWorkspace(argv: any, currentSettings: LoadedSettings): LoadedSettings {
@@ -268,7 +275,7 @@ export class OmniHook {
         }
       }
 
-      this.emitRemoteResponse(
+      OmniHook.emitRemoteHistory(
         '[HISTORY_START]'
           + JSON.stringify(historyData.filter((h) => h.text))
           + '[HISTORY_END]'

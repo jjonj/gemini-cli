@@ -9,16 +9,30 @@ import type { EventEmitter } from 'node:events';
 import { appEvents, AppEvent } from '../utils/events.js';
 import { debugLogger, type Question } from '@google/gemini-cli-core';
 
+export interface RemoteControlOptions {
+  pipeName?: string;
+  registerExitHandler?: boolean;
+}
+
 /**
  * Starts the PID-specific Named Pipe server for remote control.
  */
-export function startRemoteControl() {
+export function startRemoteControl(options?: RemoteControlOptions): net.Server {
   const pid = process.pid;
-  const pipeName = '\\\\.\\pipe\\omni-gemini-cli-' + pid;
+  const pipeName = options?.pipeName ?? '\\\\.\\pipe\\omni-gemini-cli-' + pid;
+  const registerExitHandler = options?.registerExitHandler ?? true;
   debugLogger.log(`[RemoteControl] Attempting to start server on ${pipeName}`);
 
   const server = net.createServer((socket) => {
     debugLogger.log(`Remote control client connected on ${pipeName}`);
+
+    const writeRaw = (payload: object) => {
+      try {
+        socket.write(JSON.stringify(payload) + '\n');
+      } catch (e) {
+        debugLogger.error(`Failed to write to remote control socket: ${e}`);
+      }
+    };
 
     let buffer = '';
     socket.on('data', (data) => {
@@ -52,58 +66,79 @@ export function startRemoteControl() {
                 };
                 (appEvents as any).on('newListener', bufferHandler);
               }
-            } else if (msg.command === 'response' && msg.text) {
-              appEvents.emit(AppEvent.RemoteDialogResponse, msg.text);
-            } else if (msg.command === 'history') {
+            } else if (msg.command === 'getHistory') {
               appEvents.emit(AppEvent.RequestRemoteHistory);
-            } else if (msg.command === 'readiness') {
-              appEvents.emit(AppEvent.RequestReadiness);
+            } else if (msg.command === 'checkReadiness') {
+              if (appEvents.listenerCount(AppEvent.RequestReadiness) > 0) {
+                appEvents.emit(AppEvent.RequestReadiness);
+              } else {
+                debugLogger.log(
+                  '[RemoteControl] Buffering readiness request: waiting for listener...',
+                );
+                const bufferHandler = (event: string | symbol) => {
+                  if (event === AppEvent.RequestReadiness) {
+                    debugLogger.log(
+                      '[RemoteControl] Flushing buffered readiness request.',
+                    );
+                    setTimeout(() => {
+                      appEvents.emit(AppEvent.RequestReadiness);
+                    }, 100);
+                    (appEvents as EventEmitter).off(
+                      'newListener',
+                      bufferHandler,
+                    );
+                  }
+                };
+                (appEvents as any).on('newListener', bufferHandler);
+              }
+            } else if (
+              msg.command === 'dialogResponse' &&
+              typeof msg.response === 'string'
+            ) {
+              appEvents.emit(AppEvent.RemoteDialogResponse, {
+                response: msg.response,
+                dialogType:
+                  typeof msg.dialogType === 'string'
+                    ? msg.dialogType
+                    : undefined,
+              });
             }
           } catch (e) {
-            debugLogger.error(`Failed to parse remote control message: ${e}`);
+            debugLogger.error(`Failed to parse remote command: ${e}`);
           }
         }
       }
     });
 
     const onResponse = (text: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'response', text }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write response to remote control socket: ${e}`);
-      }
+      writeRaw({ type: 'response', text });
     };
 
-    const onThought = (thought: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'thought', thought }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write thought to remote control socket: ${e}`);
-      }
+    const onThought = (text: string) => {
+      writeRaw({ type: 'thought', text });
     };
 
-    const onCodeDiff = (diff: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'code_diff', diff }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write code_diff to remote control socket: ${e}`);
-      }
+    const onCodeDiff = (text: string) => {
+      writeRaw({ type: 'codeDiff', text });
     };
 
-    const onToolCall = (toolCall: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'tool_call', toolCall }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write tool_call to remote control socket: ${e}`);
-      }
+    const onToolCall = (text: string) => {
+      writeRaw({ type: 'toolCall', text });
     };
 
-    const onDialog = (data: { type: string; prompt: string; options?: string[]; questions?: Question[] }) => {
-      try {
-        socket.write(JSON.stringify(data) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write dialog to remote control socket: ${e}`);
-      }
+    const onDialog = (data: {
+      type: string;
+      prompt: string;
+      options?: string[];
+      questions?: Question[];
+    }) => {
+      writeRaw({
+        type: 'dialog',
+        dialogType: data.type,
+        prompt: data.prompt,
+        options: data.options,
+        questions: data.questions,
+      });
     };
 
     const onTurnEnd = (data: {
@@ -117,27 +152,15 @@ export function startRemoteControl() {
       workspacePath?: string;
       workspaceName?: string;
     }) => {
-      try {
-        socket.write(JSON.stringify({ type: 'turn_end', ...data }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write turn_end to remote control socket: ${e}`);
-      }
+      writeRaw({ type: 'turn_end', ...data });
     };
 
     const onStatus = (status: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'status', status }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write status to remote control socket: ${e}`);
-      }
+      writeRaw({ type: 'status', status });
     };
 
     const onHistory = (text: string) => {
-      try {
-        socket.write(JSON.stringify({ type: 'history', text }) + '\n');
-      } catch (e) {
-        debugLogger.error(`Failed to write history to remote control socket: ${e}`);
-      }
+      writeRaw({ type: 'history', text });
     };
 
     appEvents.on(AppEvent.RemoteResponse, onResponse);
@@ -178,11 +201,15 @@ export function startRemoteControl() {
     debugLogger.error(`Failed to start remote control server: ${err}`);
   }
 
-  process.on('exit', () => {
-    try {
-      server.close();
-    } catch (_e) {
-      // Ignore cleanup errors
-    }
-  });
+  if (registerExitHandler) {
+    process.on('exit', () => {
+      try {
+        server.close();
+      } catch (_e) {
+        // Ignore cleanup errors
+      }
+    });
+  }
+
+  return server;
 }
