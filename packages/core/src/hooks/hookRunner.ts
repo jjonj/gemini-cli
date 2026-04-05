@@ -332,7 +332,19 @@ export class HookRunner {
       let stderr = '';
       let timedOut = false;
 
-      const shellConfig = getShellConfiguration();
+      let shellConfig = getShellConfiguration();
+
+      // OMNI-FLAVOR: On Windows, use cmd.exe instead of PowerShell for hooks.
+      // PowerShell initializes its engine by setting the window title to "Windows PowerShell"
+      // and does not restore it. cmd.exe is "title-neutral".
+      if (process.platform === 'win32') {
+        shellConfig = {
+          executable: 'cmd.exe',
+          argsPrefix: ['/c'],
+          shell: 'cmd',
+        };
+      }
+
       let command = this.expandCommand(
         hookConfig.command,
         input,

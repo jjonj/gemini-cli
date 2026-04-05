@@ -48,7 +48,7 @@ export function computeTerminalTitle({
     // Max context length is 80 - base.length - 2 (for brackets)
     const maxContextLen = MAX_LEN - base.length - 2;
     displayContext = truncate(displayContext, maxContextLen);
-    return `${base}(${displayContext})`.padEnd(MAX_LEN, ' ');
+    return `${base}(${displayContext}) [${process.pid}]`.padEnd(MAX_LEN, ' ');
   }
 
   // Pre-calculate suffix but keep it flexible
@@ -109,7 +109,10 @@ export function computeTerminalTitle({
   // eslint-disable-next-line no-control-regex
   const safeTitle = title.replace(/[\x00-\x1F\x7F]/g, '');
 
+  // Append PID for unique identification by the Hub
+  const finalTitle = `${safeTitle.trim()} [${process.pid}]`;
+
   // Pad the title to a fixed width to prevent taskbar icon resizing/jitter.
   // We also slice it to ensure it NEVER exceeds MAX_LEN.
-  return safeTitle.padEnd(MAX_LEN, ' ').substring(0, MAX_LEN);
+  return finalTitle.padEnd(MAX_LEN, ' ').substring(0, MAX_LEN);
 }

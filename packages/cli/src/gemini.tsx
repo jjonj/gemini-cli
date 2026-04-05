@@ -1,15 +1,18 @@
 /**
  * @license
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { createHash } from 'node:crypto';
+import * as dns from 'node:dns';
+import * as os from 'node:os';
+import * as v8 from 'node:v8';
 import {
   type StartupWarning,
   WarningPriority,
   type Config,
   type ResumedSessionData,
-  type WorktreeInfo,
   type OutputPayload,
   type ConsoleLogPayload,
   type UserFeedbackPayload,
@@ -17,10 +20,11 @@ import {
   createSessionId,
   logUserPrompt,
   AuthType,
+  getOauthClient,
   UserPromptEvent,
+  debugLogger,
   coreEvents,
   CoreEvent,
-  getOauthClient,
   patchStdio,
   writeToStdout,
   writeToStderr,
@@ -32,33 +36,12 @@ import {
   ValidationCancelledError,
   ValidationRequiredError,
   type AdminControlsSettings,
-  debugLogger,
   isHeadlessMode,
   Storage,
 } from '@google/gemini-cli-core';
-
 import { loadCliConfig, parseArguments } from './config/config.js';
 import * as cliConfig from './config/config.js';
 import { readStdin } from './utils/readStdin.js';
-import { createHash } from 'node:crypto';
-import v8 from 'node:v8';
-import os from 'node:os';
-import dns from 'node:dns';
-import { start_sandbox } from './utils/sandbox.js';
-import {
-  loadSettings,
-  SettingScope,
-  type DnsResolutionOrder,
-  type LoadedSettings,
-} from './config/settings.js';
-import {
-  loadTrustedFolders,
-  type TrustedFoldersError,
-} from './config/trustedFolders.js';
-import { getStartupWarnings } from './utils/startupWarnings.js';
-import { getUserStartupWarnings } from './utils/userStartupWarnings.js';
-import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';
-import { runNonInteractive } from './nonInteractiveCli.js';
 import {
   cleanupCheckpoints,
   registerCleanup,
@@ -67,11 +50,18 @@ import {
   registerTelemetryConfig,
   setupSignalHandlers,
 } from './utils/cleanup.js';
-import { setupWorktree } from './utils/worktreeSetup.js';
 import {
   cleanupToolOutputFiles,
   cleanupExpiredSessions,
 } from './utils/sessionCleanup.js';
+import { getStartupWarnings } from './utils/startupWarnings.js';
+import { getUserStartupWarnings } from './utils/userStartupWarnings.js';
+import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';
+import { runNonInteractive } from './nonInteractiveCli.js';
+import {
+  loadTrustedFolders,
+  type TrustedFoldersError,
+} from './config/trustedFolders.js';
 import {
   initializeApp,
   type InitializationResult,
@@ -79,6 +69,13 @@ import {
 import { validateAuthMethod } from './config/auth.js';
 import { runAcpClient } from './acp/acpStdioTransport.js';
 import { validateNonInteractiveAuth } from './validateNonInterActiveAuth.js';
+import { setupWorktree } from './utils/worktreeSetup.js';
+import { type WorktreeInfo } from '@google/gemini-cli-core';
+import { start_sandbox } from './utils/sandbox.js';
+
+import type { DnsResolutionOrder, LoadedSettings } from './config/settings.js';
+import { loadSettings, SettingScope } from './config/settings.js';
+
 import { appEvents, AppEvent } from './utils/events.js';
 import { SessionError, SessionSelector } from './utils/sessionUtils.js';
 
@@ -362,7 +359,7 @@ export async function main() {
   settings = OmniHook.initializeWorkspace(argv, settings);
 
   if (argv.startupMessages) {
-    argv.startupMessages.forEach((msg) => {
+    argv.startupMessages.forEach((msg: string) => {
       coreEvents.emitFeedback('info', msg);
     });
   }
@@ -381,7 +378,7 @@ export async function main() {
     stderr: argv.isCommand ? false : true,
     interactive: isHeadlessMode() && !argv.isCommand ? false : true,
     debugMode: isDebugMode,
-    onNewMessage: (msg) => {
+    onNewMessage: (msg: any) => {
       coreEvents.emitConsoleLog(msg.type, msg.content);
     },
   });
@@ -586,7 +583,7 @@ export async function main() {
     }
 
     // Launch cleanup expired sessions as a background task
-    cleanupExpiredSessions(config, settings.merged).catch((e) => {
+    cleanupExpiredSessions(config, settings.merged).catch((e: Error) => {
       debugLogger.error('Failed to cleanup expired sessions:', e);
     });
 
@@ -685,7 +682,7 @@ export async function main() {
     );
     const rawStartupWarnings = await rawStartupWarningsPromise;
     const startupWarnings: StartupWarning[] = [
-      ...rawStartupWarnings.map((message) => ({
+      ...rawStartupWarnings.map((message: string) => ({
         id: `startup-${createHash('sha256').update(message).digest('hex').substring(0, 16)}`,
         message,
         priority: WarningPriority.High,
