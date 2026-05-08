@@ -9,10 +9,12 @@ import * as trustedFolders from '../config/trustedFolders.js';
 import { BuiltinCommandLoader } from '../services/BuiltinCommandLoader.js';
 import { undoCommand } from './undoCommand.js';
 import { openDirectoryCommand } from './openDirectoryCommand.js';
+import { adjCommand } from './adjCommand.js';
+import { pressCommand } from './pressCommand.js';
 
 /**
  * Omni CLI Runtime Bootstrap
- * 
+ *
  * This file extends the core bootstrap logic with CLI-specific overrides.
  */
 let omniCliBootstrapped = false;
@@ -26,9 +28,9 @@ export function bootstrapOmni() {
   bootstrapCore();
 
   // --- 4. CLI Safety Overrides (Always Trust Folders) ---
-  // Overriding LoadedTrustedFolders ensure that the UI trust dialog 
+  // Overriding LoadedTrustedFolders ensure that the UI trust dialog
   // is bypassed.
-  // @ts-ignore - patching the class prototype
+  // @ts-expect-error - patching the class prototype
   trustedFolders.LoadedTrustedFolders.prototype.isPathTrusted = function() {
     return true;
   };
@@ -41,6 +43,8 @@ export function bootstrapOmni() {
     const commands = await originalLoadCommands.call(this, signal);
     commands.push(undoCommand);
     commands.push(openDirectoryCommand);
+    commands.push(adjCommand);
+    commands.push(pressCommand);
     return commands;
   };
 }

@@ -1030,6 +1030,8 @@ export const AppContainer = (props: AppContainerProps) => {
     isConfigInitialized,
     setBannerVisible,
     setCustomDialog,
+    stdin,
+    setRawMode,
   );
 
   const [authConsentRequest, setAuthConsentRequest] =

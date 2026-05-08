@@ -183,7 +183,6 @@ export async function parseArguments(
       default: false,
     })
     .option('workspace', {
-      alias: 'w',
       type: 'string',
       description: 'The initial workspace directory.',
     })

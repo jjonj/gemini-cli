@@ -95,6 +95,9 @@ export interface CommandContext {
     removeComponent: () => void;
     toggleBackgroundTasks: () => void;
     toggleShortcutsHelp: () => void;
+    /** Stdin and setRawMode for terminal-based editors */
+    stdin: NodeJS.ReadStream | null;
+    setRawMode: (mode: boolean) => void;
   };
   // Session-specific data
   session: {

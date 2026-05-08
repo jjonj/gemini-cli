@@ -224,6 +224,8 @@ describe('useSlashCommandProcessor', () => {
           true, // isConfigInitialized
           vi.fn(), // setBannerVisible
           vi.fn(), // setCustomDialog
+          null, // stdin
+          vi.fn(), // setRawMode
         ),
       );
       result = hook.result;

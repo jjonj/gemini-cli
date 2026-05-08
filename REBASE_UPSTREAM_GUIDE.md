@@ -23,11 +23,9 @@ In the **first Omni commit** of the next rebase:
 
 Delete and add to gitignore REBASE_PLAN.md. It should not be in history ever.
 
+Also take the current most recent build.py and rebase guide from the main workspace and use them instead of the outdated versions in the first commit.
 
-
-This should be handled early so the entire rebase is not repeatedly interrupted.
-
-Also take the current most recent build.py and rebase guide from the main workspace and use them instead of the outdated versions in the first commit (after applying it).
+When cherry picking feat(omni): Implementation of IPC Layer and Workspace Service next time, remove alias: 'w', from the .option('workspace', { in config.ts
 
 ## Recommended Workflow
 

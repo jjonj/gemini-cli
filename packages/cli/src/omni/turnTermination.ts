@@ -28,6 +28,8 @@ import type { RemoteTurnEndPayload } from './events.js';
  * Omni UI Hooks
  */
 export class OmniHook {
+  static getHistory: () => HistoryItem[] = () => [];
+
   /**
    * Checks for FORCE-END-TURN signal in model content chunks.
    * Returns truncated text if signal is found, otherwise null.
@@ -221,6 +223,7 @@ export class OmniHook {
     handleFinalSubmit: (text: string) => void;
     getHistory: () => HistoryItem[];
   }): () => void {
+    this.getHistory = callbacks.getHistory;
     const onRemotePrompt = (text: string) => {
       callbacks.handleFinalSubmit(text);
     };

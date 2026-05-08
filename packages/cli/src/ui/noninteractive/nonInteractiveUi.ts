@@ -45,5 +45,7 @@ export function createNonInteractiveUI(): CommandContext['ui'] {
     toggleBackgroundTasks: () => {},
     toggleShortcutsHelp: () => {},
     toggleVoiceMode: () => {},
+    stdin: null,
+    setRawMode: () => {},
   };
 }

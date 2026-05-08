@@ -106,6 +106,8 @@ export const useSlashCommandProcessor = (
   isConfigInitialized: boolean,
   setBannerVisible: (visible: boolean) => void,
   setCustomDialog: (dialog: React.ReactNode | null) => void,
+  stdin: NodeJS.ReadStream | null,
+  setRawMode: (mode: boolean) => void,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -249,6 +251,8 @@ export const useSlashCommandProcessor = (
         removeComponent: () => setCustomDialog(null),
         toggleBackgroundTasks: actions.toggleBackgroundTasks,
         toggleShortcutsHelp: actions.toggleShortcutsHelp,
+        stdin,
+        setRawMode,
       },
       session: {
         stats: session.stats,
@@ -276,6 +280,8 @@ export const useSlashCommandProcessor = (
       extensionsUpdateState,
       setBannerVisible,
       setCustomDialog,
+      stdin,
+      setRawMode,
     ],
   );
 
