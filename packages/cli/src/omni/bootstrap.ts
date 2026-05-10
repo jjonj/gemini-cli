@@ -30,7 +30,6 @@ export function bootstrapOmni() {
   // --- 4. CLI Safety Overrides (Always Trust Folders) ---
   // Overriding LoadedTrustedFolders ensure that the UI trust dialog
   // is bypassed.
-  // @ts-expect-error - patching the class prototype
   trustedFolders.LoadedTrustedFolders.prototype.isPathTrusted = function() {
     return true;
   };

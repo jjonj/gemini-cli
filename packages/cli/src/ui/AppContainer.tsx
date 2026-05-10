@@ -192,6 +192,7 @@ import {
 } from './utils/historyUtils.js';
 import { OmniDialogManager } from '../omni/OmniDialogManager.js';
 import { OmniHook } from '../omni/turnTermination.js';
+import { handleOmniGlobalKeypress } from '../omni/globalHotkeys.js';
 
 interface AppContainerProps {
   config: Config;
@@ -1794,6 +1795,10 @@ export const AppContainer = (props: AppContainerProps) => {
 
   const handleGlobalKeypress = useCallback(
     (key: Key): boolean => {
+      if (handleOmniGlobalKeypress(key, { config, addItem: historyManager.addItem })) {
+        return true;
+      }
+
       // Debug log keystrokes if enabled
       if (settings.merged.general.debugKeystrokeLogging) {
         debugLogger.log('[DEBUG] Keystroke:', JSON.stringify(key));
@@ -2049,6 +2054,7 @@ export const AppContainer = (props: AppContainerProps) => {
       startRecording,
       stopRecording,
       mouseMode,
+      historyManager.addItem,
     ],
   );
 
