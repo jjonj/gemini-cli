@@ -444,7 +444,10 @@ export class ShellToolInvocation extends BaseToolInvocation<
     } = options;
     const strippedCommand = stripShellWrapper(this.params.command);
 
-    if (detectCommandSubstitution(strippedCommand)) {
+    if (
+      this.context.config.getApprovalMode() !== ApprovalMode.YOLO &&
+      detectCommandSubstitution(strippedCommand)
+    ) {
       return {
         llmContent:
           'Command injection detected: command substitution syntax ' +

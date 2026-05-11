@@ -10,6 +10,8 @@ import { workspaceService } from './WorkspaceService.js';
 import { Scheduler } from '../scheduler/scheduler.js';
 import { OmniLogger } from './omniLogger.js';
 import { coreEvents } from '../utils/events.js';
+import { PolicyEngine } from '../policy/policy-engine.js';
+import { ApprovalMode } from '../policy/types.js';
 import {
   type ValidatingToolCall,
 } from '../scheduler/types.js';
@@ -24,6 +26,20 @@ export function bootstrapOmni() {
   // (core and CLI) see the folder as trusted.
   Config.prototype.isTrustedFolder = function() {
     return true;
+  };
+
+  // 1.2 YOLO Redirection Override
+  // By default, core downgrades to ASK_USER if redirection is used and sandboxing is off.
+  // We override this for YOLO mode to maintain autonomy.
+  const originalShouldDowngrade = (PolicyEngine.prototype as any).shouldDowngradeForRedirection;
+  (PolicyEngine.prototype as any).shouldDowngradeForRedirection = function(
+    command: string,
+    allowRedirection?: boolean,
+  ) {
+    if (this.approvalMode === ApprovalMode.YOLO) {
+      return false;
+    }
+    return originalShouldDowngrade.apply(this, [command, allowRedirection]);
   };
 
   // 1.5 Path Interception for Workspace Service
