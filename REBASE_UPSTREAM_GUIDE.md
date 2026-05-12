@@ -76,6 +76,20 @@ When cherry picking feat(omni): Implementation of IPC Layer and Workspace Servic
 - Bundle and source can drift; launcher may run stale bundle if not rebuilt.
 - Stale git lock files can appear mid-operation; verify repo state before continuing.
 
+## IPC & Hub Sync Fixes (Crucial)
+
+The following issues were identified and fixed after a recent rebase and MUST be verified during the next one:
+
+- **Named Pipe Prefix Mismatch:** 
+  - **Issue:** The CLI was creating pipes with `omni-gemini-cli-` while the Hub looked for `gemini-cli-`.
+  - **Fix:** Ensure `packages/cli/src/omni/remoteControl.ts` uses the `omni-gemini-cli-` prefix. This is the source of truth for the Hub's connection.
+- **Missing Contract Tests:**
+  - **Issue:** `remoteControl.contract.test.ts` and `remoteControl.listenerGap.repro.test.ts` were lost during cherry-picking/conflicts.
+  - **Fix:** Always verify these files exist in `packages/cli/src/omni/` after the IPC layer commit is applied. They are the only way to catch protocol drift without a full Hub E2E test.
+- **Hub Constructor Alignment:**
+  - **Issue:** The Hub's `GeminiSession` constructor now requires `activePid` and `rootPid`.
+  - **Fix:** If the Hub is updated, ensure any mock sessions or contract tests in the CLI that simulate Hub behavior are updated to pass the correct number of arguments.
+
 ## Practical Commands (Reference)
 
 ```powershell
